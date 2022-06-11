@@ -207,6 +207,95 @@ impl AnnotatedSyntaxTree {
         hlsl
     }
 
+    pub fn generate_glsl(mut self) -> (String, String) {
+        // Write header
+        let mut glsl_vertex =
+            format!("#version 330 core\n\n// Generated from Alexandria Common Shader Language\n\n");
+        let mut glsl_frag = glsl_vertex.clone();
+
+        // Write fragment output
+        glsl_frag.push_str("out vec4 acsl_fragment_color;\n\n");
+
+        // Write vertex input
+        let vertex_input_type = self.vertex_input_type.unwrap();
+        match vertex_input_type {
+            Type::Struct(structure) => {
+                let members = structure.members();
+                for i in 0..members.len() {
+                    glsl_vertex.push_str(&format!(
+                        "layout (location = {}) in {} acsl_vertex_input_{};\n",
+                        i,
+                        members[i].1.glsl(),
+                        members[i].0
+                    ));
+                }
+
+                glsl_vertex.push('\n');
+            }
+            _ => panic!("Vertex input must be a structure"),
+        }
+
+        // Write fragment input & vertex output
+        let fragment_input_type = self.fragment_input_type.unwrap();
+        let mut position_variable_name = None;
+        match fragment_input_type {
+            Type::Struct(structure) => {
+                let members = structure.members();
+                let semantics = structure.semantics();
+                for i in 0..members.len() {
+                    glsl_vertex.push_str(&format!(
+                        "out {} acsl_pixel_input_{};\n",
+                        members[i].1.glsl(),
+                        members[i].0
+                    ));
+                    glsl_frag.push_str(&format!(
+                        "in {} acsl_pixel_input_{};\n",
+                        members[i].1.glsl(),
+                        members[i].0
+                    ));
+
+                    if semantics[i] == "SV_POSITION" {
+                        position_variable_name = Some(members[i].0.to_string());
+                    }
+                }
+
+                glsl_vertex.push('\n');
+                glsl_frag.push('\n');
+            }
+            _ => panic!("Fragment input must be a structure"),
+        };
+
+        let position_variable_name = match position_variable_name {
+            Some(position_variable_name) => position_variable_name,
+            None => panic!("Pixel input type must have position semantic"),
+        };
+
+        // Write declarations
+        for declaration in self.declaration_order {
+            match declaration {
+                DeclarationType::Function => {
+                    let (vertex, frag) = self
+                        .functions
+                        .pop_front()
+                        .unwrap()
+                        .generate_glsl(&position_variable_name);
+                    glsl_vertex.push_str(&vertex);
+                    glsl_frag.push_str(&frag);
+                }
+                DeclarationType::Struct => {
+                    let glsl = self.structs.pop_front().unwrap().generate_glsl();
+                    glsl_vertex.push_str(&glsl);
+                    glsl_frag.push_str(&glsl);
+                }
+            }
+
+            glsl_vertex.push('\n');
+            glsl_frag.push('\n');
+        }
+
+        (glsl_vertex, glsl_frag)
+    }
+
     fn verify_name(&self, name: &str) -> bool {
         const BUILTIN_TYPENAMES: [&str; 5] = ["float", "float1", "float2", "float3", "float4"];
 

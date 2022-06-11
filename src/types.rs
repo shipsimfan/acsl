@@ -95,6 +95,13 @@ impl Type {
             Type::Struct(structure) => structure.name().to_string(),
         }
     }
+
+    pub fn glsl(&self) -> String {
+        match self {
+            Type::Primitive(primitive) => primitive.glsl(),
+            Type::Struct(structure) => structure.name().to_string(),
+        }
+    }
 }
 
 impl PartialEq for Type {
@@ -145,6 +152,14 @@ impl Primitive {
             Primitive::Void => "void".to_owned(),
             Primitive::Float => "float".to_owned(),
             Primitive::FloatVec(dimension) => format!("float{}", dimension),
+        }
+    }
+
+    pub fn glsl(&self) -> String {
+        match self {
+            Primitive::Void => "void".to_owned(),
+            Primitive::Float => "float".to_owned(),
+            Primitive::FloatVec(dimension) => format!("vec{}", dimension),
         }
     }
 

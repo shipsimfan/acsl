@@ -38,6 +38,7 @@ impl Statement {
                 if expression_type == *function_return_type {
                     Ok(annotated::statement::Statement::Return(
                         expression.semantic_analysis(output_tree, scope)?,
+                        expression_type,
                     ))
                 } else {
                     Err(SemanticAnalysisError::InvalidReturnType(

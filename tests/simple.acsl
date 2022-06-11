@@ -6,12 +6,12 @@ struct PixelInput {
     position: float4 : SV_POSITION,
 }
 
-fn vertex_main(input: VertexInput) -> PixelInput {
+fn vertex_main(vertex_input: VertexInput) -> PixelInput {
     return PixelInput {
-        position: input.position,
+        position: vertex_input.position,
     };
 }
 
-fn fragment_main(input: PixelInput) -> float4 {
+fn fragment_main(pixel_input: PixelInput) -> float4 {
     return float4(1.0, 1.0, 1.0, 1.0);
 }

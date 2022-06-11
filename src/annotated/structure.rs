@@ -23,6 +23,10 @@ impl Struct {
         &self.members
     }
 
+    pub fn semantics(&self) -> &[String] {
+        self.semantics.as_ref().unwrap()
+    }
+
     pub fn generate_hlsl(&self) -> String {
         let mut hlsl = format!("struct {} {{\n", self.name);
 
@@ -43,5 +47,21 @@ impl Struct {
         hlsl.push_str("};\n");
 
         hlsl
+    }
+
+    pub fn generate_glsl(&self) -> String {
+        let mut glsl = format!("struct {} {{\n", self.name);
+
+        for i in 0..self.members.len() {
+            glsl.push_str(&format!(
+                "    {} {};\n",
+                self.members[i].1.glsl(),
+                self.members[i].0
+            ));
+        }
+
+        glsl.push_str("};\n");
+
+        glsl
     }
 }

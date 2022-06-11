@@ -109,6 +109,63 @@ impl Function {
         string
     }
 
+    pub fn generate_glsl(self, position_output_name: &str) -> (String, String) {
+        let (mut glsl, vertex_main, fragment_main) = match self.name() {
+            "vertex_main" | "fragment_main" => {
+                let vertex = self.name() == "vertex_main";
+
+                let mut glsl = "void main() {\n".to_owned();
+
+                let parameter = &self.parameters[0];
+                let parameter_type = parameter.parameter_type();
+                glsl.push_str(&format!(
+                    "    {} {} = {}(",
+                    parameter_type.glsl(),
+                    parameter.name,
+                    parameter_type.glsl()
+                ));
+
+                let members = parameter_type.members();
+                for i in 0..members.len() {
+                    glsl.push_str(&format!(
+                        "acsl_{}_input_{}",
+                        if vertex { "vertex" } else { "pixel" },
+                        members[i].0
+                    ));
+
+                    if i != members.len() - 1 {
+                        glsl.push_str(", ");
+                    }
+                }
+
+                glsl.push_str(");\n\n");
+
+                (glsl, vertex, !vertex)
+            }
+            _ => (
+                format!("{} {}() {{\n", self.return_type.glsl(), self.name),
+                false,
+                false,
+            ),
+        };
+
+        glsl.push_str(&self.code_block.unwrap().glsl(
+            vertex_main,
+            fragment_main,
+            position_output_name,
+        ));
+
+        glsl.push_str("}\n");
+
+        if vertex_main {
+            (glsl, String::new())
+        } else if fragment_main {
+            (String::new(), glsl)
+        } else {
+            (glsl.clone(), glsl)
+        }
+    }
+
     fn new_builtin(name: String, parameters: Vec<FunctionParameter>, return_type: Type) -> Self {
         Function {
             name,

@@ -30,6 +30,14 @@ pub fn compile_hlsl<S: AsRef<str>>(code: S) -> Result<String, CompilationError> 
     Ok(ast.generate_hlsl())
 }
 
+pub fn compile_glsl<S: AsRef<str>>(code: S) -> Result<(String, String), CompilationError> {
+    // Compile
+    let ast = compile(code)?;
+
+    // Generate code
+    Ok(ast.generate_glsl())
+}
+
 impl std::error::Error for CompilationError {}
 
 impl std::fmt::Display for CompilationError {
