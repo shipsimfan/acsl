@@ -2,7 +2,7 @@ use super::Declaration;
 use crate::{
     annotated::{self, AnnotatedSyntaxTree},
     ast::SemanticAnalysisError,
-    lexer,
+    next_token,
     parser::ParserError,
     stream::Stream,
     tokens::TokenClass,
@@ -10,83 +10,43 @@ use crate::{
 };
 
 pub fn parse_struct(stream: &mut Stream) -> Result<Declaration, ParserError> {
-    let name = match lexer::next_token(stream)? {
-        Some(token) => match token.class() {
-            TokenClass::Identifier(identifier) => identifier.to_owned(),
-            _ => return Err(ParserError::UnexpectedToken(token)),
-        },
-        None => return Err(ParserError::UnexpectedEOF),
-    };
+    let name = next_token!(stream, TokenClass::Identifier(identifier) => {identifier.to_owned()});
 
-    match lexer::next_token(stream)? {
-        Some(token) => match token.class() {
-            TokenClass::OpenCurlyBrace => {}
-            _ => return Err(ParserError::UnexpectedToken(token)),
-        },
-        None => return Err(ParserError::UnexpectedEOF),
-    }
+    next_token!(stream, TokenClass::OpenCurlyBrace => {});
 
     let mut members = Vec::new();
     loop {
-        let name = match lexer::next_token(stream)? {
-            Some(token) => match token.class() {
-                TokenClass::Identifier(identifier) => identifier.to_owned(),
-                TokenClass::CloseCurlyBrace => break,
-                _ => return Err(ParserError::UnexpectedToken(token)),
-            },
-            None => return Err(ParserError::UnexpectedEOF),
-        };
+        let name = next_token!(stream,
+            TokenClass::Identifier(identifier) => {identifier.to_owned()},
+            TokenClass::CloseCurlyBrace => {break}
+        );
 
-        match lexer::next_token(stream)? {
-            Some(token) => match token.class() {
-                TokenClass::Colon => {}
-                _ => return Err(ParserError::UnexpectedToken(token)),
-            },
-            None => return Err(ParserError::UnexpectedEOF),
-        }
+        next_token!(stream, TokenClass::Colon => {});
 
-        let type_name = match lexer::next_token(stream)? {
-            Some(token) => match token.class() {
-                TokenClass::Identifier(identifier) => identifier.to_owned(),
-                _ => return Err(ParserError::UnexpectedToken(token)),
-            },
-            None => return Err(ParserError::UnexpectedEOF),
-        };
+        let type_name =
+            next_token!(stream, TokenClass::Identifier(identifier) => {identifier.to_owned()});
 
-        match lexer::next_token(stream)? {
-            Some(token) => match token.class() {
-                TokenClass::CloseCurlyBrace => {
-                    members.push((name, type_name, None));
-                    break;
-                }
-                TokenClass::Comma => {
-                    members.push((name, type_name, None));
-                    continue;
-                }
-                TokenClass::Colon => {}
-                _ => return Err(ParserError::UnexpectedToken(token)),
+        next_token!(stream,
+            TokenClass::CloseCurlyBrace => {
+                members.push((name, type_name, None));
+                break;
             },
-            None => return Err(ParserError::UnexpectedEOF),
-        }
+            TokenClass::Comma => {
+                members.push((name, type_name, None));
+                continue;
+            },
+            TokenClass::Colon => {}
+        );
 
-        let semantic = match lexer::next_token(stream)? {
-            Some(token) => match token.class() {
-                TokenClass::Identifier(identifier) => identifier.to_owned(),
-                _ => return Err(ParserError::UnexpectedToken(token)),
-            },
-            None => return Err(ParserError::UnexpectedEOF),
-        };
+        let semantic =
+            next_token!(stream, TokenClass::Identifier(identifier) => {identifier.to_owned()});
 
         members.push((name, type_name, Some(semantic)));
 
-        match lexer::next_token(stream)? {
-            Some(token) => match token.class() {
-                TokenClass::CloseCurlyBrace => break,
-                TokenClass::Comma => {}
-                _ => return Err(ParserError::UnexpectedToken(token)),
-            },
-            None => return Err(ParserError::UnexpectedEOF),
-        }
+        next_token!(stream,
+            TokenClass::CloseCurlyBrace => {break},
+            TokenClass::Comma => {}
+        );
     }
 
     Ok(Declaration::Struct(name, members))

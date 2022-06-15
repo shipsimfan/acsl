@@ -30,3 +30,8 @@ macro_rules! run_test {
 fn simple_1() {
     run_test!("tests/simple");
 }
+
+#[test]
+fn matrix() {
+    run_test!("tests/matrix");
+}

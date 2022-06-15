@@ -1,8 +1,8 @@
 use super::Declaration;
 use crate::{
     annotated::{self, function::FunctionParameter, AnnotatedSyntaxTree},
-    ast::{code_block::CodeBlock, scope::Scope, SemanticAnalysisError},
-    lexer,
+    ast::{code_block::CodeBlock, SemanticAnalysisError},
+    lexer, next_token,
     parser::ParserError,
     stream::Stream,
     tokens::TokenClass,
@@ -10,23 +10,10 @@ use crate::{
 };
 
 pub fn parse_function(stream: &mut Stream) -> Result<Declaration, ParserError> {
-    // Parse name
-    let name = match lexer::next_token(stream)? {
-        Some(token) => match token.class() {
-            TokenClass::Identifier(name) => name.to_owned(),
-            _ => return Err(ParserError::UnexpectedToken(token)),
-        },
-        None => return Err(ParserError::UnexpectedEOF),
-    };
+    let name = next_token!(stream, TokenClass::Identifier(name) => { name.to_owned() });
 
     // Parse parameters
-    match lexer::next_token(stream)? {
-        Some(token) => match token.class() {
-            TokenClass::OpenParenthesis => {}
-            _ => return Err(ParserError::UnexpectedToken(token)),
-        },
-        None => return Err(ParserError::UnexpectedEOF),
-    };
+    next_token!(stream, TokenClass::OpenParenthesis => {});
 
     let mut parameters = Vec::new();
     let mut name_token = match lexer::next_token(stream)? {
@@ -47,55 +34,28 @@ pub fn parse_function(stream: &mut Stream) -> Result<Declaration, ParserError> {
             None => break,
         };
 
-        match lexer::next_token(stream)? {
-            Some(token) => match token.class() {
-                TokenClass::Colon => {}
-                _ => return Err(ParserError::UnexpectedToken(token)),
-            },
-            None => return Err(ParserError::UnexpectedEOF),
-        }
+        next_token!(stream, TokenClass::Colon => {});
 
-        let type_name = match lexer::next_token(stream)? {
-            Some(token) => match token.class() {
-                TokenClass::Identifier(type_name) => type_name.to_owned(),
-                _ => return Err(ParserError::UnexpectedToken(token)),
-            },
-            None => return Err(ParserError::UnexpectedEOF),
-        };
+        let type_name =
+            next_token!(stream, TokenClass::Identifier(type_name) => {type_name.to_owned()});
 
         parameters.push((name, type_name));
 
-        match lexer::next_token(stream)? {
-            Some(token) => match token.class() {
-                TokenClass::CloseParenthesis => break,
-                TokenClass::Comma => name_token = lexer::next_token(stream)?,
-                _ => return Err(ParserError::UnexpectedToken(token)),
-            },
-            None => return Err(ParserError::UnexpectedEOF),
-        }
+        next_token!(stream,
+            TokenClass::CloseParenthesis => {break},
+            TokenClass::Comma => {name_token = lexer::next_token(stream)?}
+        );
     }
 
     // Parse return type
-    let return_type = match lexer::next_token(stream)? {
-        Some(token) => match token.class() {
-            TokenClass::OpenCurlyBrace => None,
-            TokenClass::RightArrow => match lexer::next_token(stream)? {
-                Some(token) => match token.class() {
-                    TokenClass::Identifier(return_type) => match lexer::next_token(stream)? {
-                        Some(token) => match token.class() {
-                            TokenClass::OpenCurlyBrace => Some(return_type.to_owned()),
-                            _ => return Err(ParserError::UnexpectedToken(token)),
-                        },
-                        None => return Err(ParserError::UnexpectedEOF),
-                    },
-                    _ => return Err(ParserError::UnexpectedToken(token)),
-                },
-                None => return Err(ParserError::UnexpectedEOF),
-            },
-            _ => return Err(ParserError::UnexpectedToken(token)),
-        },
-        None => return Err(ParserError::UnexpectedEOF),
-    };
+    let return_type = next_token!(stream,
+        TokenClass::OpenCurlyBrace => {None},
+        TokenClass::RightArrow => {
+            next_token!(stream, TokenClass::Identifier(return_type) => {
+                next_token!(stream, TokenClass::OpenCurlyBrace => {Some(return_type.to_owned())})
+            })
+        }
+    );
 
     // Parse code block
     let code_block = CodeBlock::parse(stream, 1)?;
@@ -117,7 +77,7 @@ pub fn semantic_analysis(
 ) -> Result<annotated::function::Function, SemanticAnalysisError> {
     let mut f_parameters = Vec::with_capacity(parameters.len());
 
-    let mut scope = Scope::new();
+    let mut scope = output_tree.global_scope().new_child();
     for (name, type_name) in parameters {
         let parameter_type = Type::from_name(&type_name, output_tree)?;
         f_parameters.push(FunctionParameter::new(name.clone(), parameter_type.clone()));

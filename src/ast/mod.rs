@@ -31,6 +31,8 @@ pub enum SemanticAnalysisError {
     InvalidFragmentMainReturnType(String),
     FragmentMainParameterTypeMismatch(String, String),
     AllFieldsNeedSemantics(String),
+    InvalidVariableName(String),
+    InvalidOperation(String, String, String),
 }
 
 pub struct AbstractSyntaxTree {
@@ -116,6 +118,8 @@ impl std::fmt::Display for SemanticAnalysisError {
             SemanticAnalysisError::InvalidFragmentMainReturnType(actual) => write!(f, "\"fragment_main()\" must return a float4, instead it is \"{}\"", actual),
             SemanticAnalysisError::InvalidFragmentMainParameterType(actual) => write!(f, "The parameter for \"fragment_main()\" must be a structure with semantics, instead it is \"{}\"", actual),
             SemanticAnalysisError::AllFieldsNeedSemantics(structure_name) => write!(f, "All fields require semantics when they are defined, and \"{}\" is missing some", structure_name),
+            SemanticAnalysisError::InvalidVariableName(name) => write!(f, "Invalid variable name \"{}\", variables beginning with \"gl_\" or \"acsl_\" are reserved.", name),
+            SemanticAnalysisError::InvalidOperation(left_type, op, right_type) => write!(f, "Unable to perform operation \"{}\" on types \"{}\" and \"{}\"", op, left_type, right_type),
         }
     }
 }

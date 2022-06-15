@@ -1,6 +1,6 @@
 use crate::{
     annotated::{structure::Struct, AnnotatedSyntaxTree},
-    ast::SemanticAnalysisError,
+    ast::{expression::MultiplyClass, SemanticAnalysisError},
 };
 use std::{rc::Rc, sync::Once};
 
@@ -15,6 +15,7 @@ pub enum Primitive {
     Void,
     Float,
     FloatVec(usize),
+    FloatMatrix(usize, usize),
 }
 
 static INIT_MEMBERS: Once = Once::new();
@@ -50,6 +51,70 @@ impl Type {
         Type::Primitive(Primitive::FloatVec(4))
     }
 
+    pub fn float1x1() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(1, 1))
+    }
+
+    pub fn float1x2() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(1, 2))
+    }
+
+    pub fn float1x3() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(1, 3))
+    }
+
+    pub fn float1x4() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(1, 4))
+    }
+
+    pub fn float2x1() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(2, 1))
+    }
+
+    pub fn float2x2() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(2, 2))
+    }
+
+    pub fn float2x3() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(2, 3))
+    }
+
+    pub fn float2x4() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(2, 4))
+    }
+
+    pub fn float3x1() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(3, 1))
+    }
+
+    pub fn float3x2() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(3, 2))
+    }
+
+    pub fn float3x3() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(3, 3))
+    }
+
+    pub fn float3x4() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(3, 4))
+    }
+
+    pub fn float4x1() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(4, 1))
+    }
+
+    pub fn float4x2() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(4, 2))
+    }
+
+    pub fn float4x3() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(4, 3))
+    }
+
+    pub fn float4x4() -> Self {
+        Type::Primitive(Primitive::FloatMatrix(4, 4))
+    }
+
     pub fn from_name(
         name: &str,
         output_tree: &AnnotatedSyntaxTree,
@@ -60,6 +125,22 @@ impl Type {
             "float2" => Ok(Type::float2()),
             "float3" => Ok(Type::float3()),
             "float4" => Ok(Type::float4()),
+            "float1x1" => Ok(Type::float1x1()),
+            "float1x2" => Ok(Type::float1x2()),
+            "float1x3" => Ok(Type::float1x3()),
+            "float1x4" => Ok(Type::float1x4()),
+            "float2x1" => Ok(Type::float2x1()),
+            "float2x2" => Ok(Type::float2x2()),
+            "float2x3" => Ok(Type::float2x3()),
+            "float2x4" => Ok(Type::float2x4()),
+            "float3x1" => Ok(Type::float3x1()),
+            "float3x2" => Ok(Type::float3x2()),
+            "float3x3" => Ok(Type::float3x3()),
+            "float3x4" => Ok(Type::float3x4()),
+            "float4x1" => Ok(Type::float4x1()),
+            "float4x2" => Ok(Type::float4x2()),
+            "float4x3" => Ok(Type::float4x3()),
+            "float4x4" => Ok(Type::float4x4()),
             _ => output_tree.get_type(name),
         }
     }
@@ -87,6 +168,36 @@ impl Type {
             Type::Primitive(primitive) => primitive.members(),
             Type::Struct(structure) => structure.members(),
         }
+    }
+
+    pub fn multiply_type(
+        &self,
+        other: &Type,
+        op: MultiplyClass,
+    ) -> Result<Type, SemanticAnalysisError> {
+        let left_primitive = match self {
+            Type::Primitive(primitive) => primitive,
+            Type::Struct(_) => {
+                return Err(SemanticAnalysisError::InvalidOperation(
+                    self.to_string(),
+                    op.to_string(),
+                    other.to_string(),
+                ))
+            }
+        };
+
+        let right_primitive = match other {
+            Type::Primitive(primitive) => primitive,
+            Type::Struct(_) => {
+                return Err(SemanticAnalysisError::InvalidOperation(
+                    self.to_string(),
+                    op.to_string(),
+                    other.to_string(),
+                ))
+            }
+        };
+
+        left_primitive.multiply_type(right_primitive, op)
     }
 
     pub fn hlsl(&self) -> String {
@@ -143,7 +254,77 @@ impl Primitive {
                     4 => FLOAT4_MEMBERS.as_ref().unwrap(),
                     _ => panic!("Invalid float vector dimension"),
                 },
+                Primitive::FloatMatrix(_, _) => &[],
             }
+        }
+    }
+
+    pub fn multiply_type(
+        &self,
+        other: &Primitive,
+        op: MultiplyClass,
+    ) -> Result<Type, SemanticAnalysisError> {
+        match self {
+            Primitive::Void => Err(SemanticAnalysisError::InvalidOperation(
+                self.to_string(),
+                op.to_string(),
+                other.to_string(),
+            )),
+            Primitive::Float => match other {
+                Primitive::Float => Ok(Type::float()),
+                Primitive::FloatVec(dimension) => {
+                    Ok(Type::Primitive(Primitive::FloatVec(*dimension)))
+                }
+                Primitive::FloatMatrix(n, m) => Ok(Type::Primitive(Primitive::FloatMatrix(*n, *m))),
+                Primitive::Void => Err(SemanticAnalysisError::InvalidOperation(
+                    self.to_string(),
+                    op.to_string(),
+                    other.to_string(),
+                )),
+            },
+            Primitive::FloatVec(left_dimension) => match other {
+                Primitive::Float => Ok(Type::Primitive(Primitive::FloatVec(*left_dimension))),
+                Primitive::FloatVec(right_dimension) => match left_dimension == right_dimension {
+                    true => Ok(Type::Primitive(Primitive::FloatVec(*left_dimension))),
+                    false => Err(SemanticAnalysisError::InvalidOperation(
+                        self.to_string(),
+                        op.to_string(),
+                        other.to_string(),
+                    )),
+                },
+                Primitive::FloatMatrix(n, m) => match left_dimension == n {
+                    true => Ok(Type::Primitive(Primitive::FloatVec(*m))),
+                    false => Err(SemanticAnalysisError::InvalidOperation(
+                        self.to_string(),
+                        op.to_string(),
+                        other.to_string(),
+                    )),
+                },
+                Primitive::Void => Err(SemanticAnalysisError::InvalidOperation(
+                    self.to_string(),
+                    op.to_string(),
+                    other.to_string(),
+                )),
+            },
+            Primitive::FloatMatrix(left_n, left_m) => match other {
+                Primitive::Float => Ok(Type::Primitive(Primitive::FloatMatrix(*left_n, *left_m))),
+                Primitive::FloatVec(dimension) => match dimension == left_m {
+                    true => Ok(Type::Primitive(Primitive::FloatVec(*left_n))),
+                    false => Err(SemanticAnalysisError::InvalidOperation(
+                        self.to_string(),
+                        op.to_string(),
+                        other.to_string(),
+                    )),
+                },
+                Primitive::FloatMatrix(_, right_m) => {
+                    Ok(Type::Primitive(Primitive::FloatMatrix(*left_n, *right_m)))
+                }
+                Primitive::Void => Err(SemanticAnalysisError::InvalidOperation(
+                    self.to_string(),
+                    op.to_string(),
+                    other.to_string(),
+                )),
+            },
         }
     }
 
@@ -152,6 +333,7 @@ impl Primitive {
             Primitive::Void => "void".to_owned(),
             Primitive::Float => "float".to_owned(),
             Primitive::FloatVec(dimension) => format!("float{}", dimension),
+            Primitive::FloatMatrix(n, m) => format!("float{}x{}", n, m),
         }
     }
 
@@ -160,6 +342,7 @@ impl Primitive {
             Primitive::Void => "void".to_owned(),
             Primitive::Float => "float".to_owned(),
             Primitive::FloatVec(dimension) => format!("vec{}", dimension),
+            Primitive::FloatMatrix(n, m) => format!("mat{}x{}", m, n),
         }
     }
 
@@ -199,6 +382,7 @@ impl std::fmt::Display for Primitive {
             Primitive::Void => write!(f, "()"),
             Primitive::Float => write!(f, "float"),
             Primitive::FloatVec(dimension) => write!(f, "float{}", dimension),
+            Primitive::FloatMatrix(n, m) => write!(f, "float{}x{}", n, m),
         }
     }
 }

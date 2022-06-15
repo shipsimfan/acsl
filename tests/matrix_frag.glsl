@@ -6,6 +6,11 @@ out vec4 acsl_fragment_color;
 
 in vec4 acsl_pixel_input_position;
 
+struct MatrixBuffer {
+    mat4x4 object;
+    mat4x4 view;
+};
+
 struct VertexInput {
     vec4 position;
 };
@@ -13,6 +18,8 @@ struct VertexInput {
 struct PixelInput {
     vec4 position;
 };
+
+layout(location = 0) uniform MatrixBuffer matrix_buffer;
 
 
 void main() {

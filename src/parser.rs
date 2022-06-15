@@ -1,6 +1,9 @@
 use crate::{
     ast::{
-        declaration::{function::parse_function, structure::parse_struct},
+        declaration::{
+            constant_buffer::parse_constant_buffer, function::parse_function,
+            structure::parse_struct,
+        },
         AbstractSyntaxTree,
     },
     lexer,
@@ -15,6 +18,19 @@ pub enum ParserError {
     UnexpectedEOF,
 }
 
+#[macro_export]
+macro_rules! next_token {
+    ($stream:expr, $($token_class: pat => $block:block),+) => {
+        match crate::lexer::next_token($stream)? {
+            Some(token) => match token.class() {
+                $($token_class => $block),+
+                _ => return Err(crate::parser::ParserError::UnexpectedToken(token)),
+            }
+            None => return Err(crate::parser::ParserError::UnexpectedEOF),
+        }
+    };
+}
+
 pub fn parse(code: &str) -> Result<AbstractSyntaxTree, ParserError> {
     println!("Tokens:");
 
@@ -25,6 +41,7 @@ pub fn parse(code: &str) -> Result<AbstractSyntaxTree, ParserError> {
         ast.push(match token.class() {
             TokenClass::Fn => parse_function(&mut stream)?,
             TokenClass::Struct => parse_struct(&mut stream)?,
+            TokenClass::CBuffer => parse_constant_buffer(&mut stream)?,
             _ => return Err(ParserError::UnexpectedToken(token)),
         })
     }

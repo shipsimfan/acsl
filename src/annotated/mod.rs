@@ -1,9 +1,14 @@
-use crate::{ast::SemanticAnalysisError, types::Type};
+use crate::{
+    ast::{scope::Scope, SemanticAnalysisError},
+    types::Type,
+};
+use constant_buffer::ConstantBuffer;
 use function::Function;
 use std::{collections::VecDeque, rc::Rc};
 use structure::Struct;
 
 pub mod code_block;
+pub mod constant_buffer;
 pub mod expression;
 pub mod function;
 pub mod statement;
@@ -12,15 +17,20 @@ pub mod structure;
 enum DeclarationType {
     Function,
     Struct,
+    ConstantBuffer,
 }
 
 pub struct AnnotatedSyntaxTree {
     functions: VecDeque<Function>,
     structs: VecDeque<Rc<Struct>>,
 
+    constant_buffers: VecDeque<ConstantBuffer>,
+
     declaration_order: Vec<DeclarationType>,
 
     builtin_functions: Box<[Function]>,
+
+    global_scope: Scope,
 
     vertex_input_type: Option<Type>,
     fragment_input_type: Option<Type>,
@@ -31,8 +41,10 @@ impl AnnotatedSyntaxTree {
         AnnotatedSyntaxTree {
             functions: VecDeque::new(),
             structs: VecDeque::new(),
+            constant_buffers: VecDeque::new(),
             declaration_order: Vec::new(),
             builtin_functions: Function::builtin_functions(),
+            global_scope: Scope::new(),
             vertex_input_type: None,
             fragment_input_type: None,
         }
@@ -85,8 +97,12 @@ impl AnnotatedSyntaxTree {
         return Err(SemanticAnalysisError::UnknownType(name.to_string()));
     }
 
+    pub fn global_scope(&self) -> &Scope {
+        &self.global_scope
+    }
+
     pub fn push_function(&mut self, function: Function) -> Result<(), SemanticAnalysisError> {
-        if !self.verify_name(function.name()) {
+        if !self.verify_type_name(function.name()) {
             return Err(SemanticAnalysisError::MultipleDefinition(
                 function.name().to_owned(),
             ));
@@ -176,7 +192,7 @@ impl AnnotatedSyntaxTree {
     }
 
     pub fn push_struct(&mut self, structure: Struct) -> Result<(), SemanticAnalysisError> {
-        if !self.verify_name(structure.name()) {
+        if !self.verify_type_name(structure.name()) {
             return Err(SemanticAnalysisError::MultipleDefinition(
                 structure.name().to_owned(),
             ));
@@ -184,6 +200,21 @@ impl AnnotatedSyntaxTree {
 
         self.declaration_order.push(DeclarationType::Struct);
         self.structs.push_back(Rc::new(structure));
+
+        Ok(())
+    }
+
+    pub fn push_constant_buffer(
+        &mut self,
+        constant_buffer: ConstantBuffer,
+    ) -> Result<(), SemanticAnalysisError> {
+        self.global_scope.define_variable(
+            constant_buffer.name().to_owned(),
+            constant_buffer.cb_type().clone(),
+        )?;
+
+        self.constant_buffers.push_back(constant_buffer);
+        self.declaration_order.push(DeclarationType::ConstantBuffer);
 
         Ok(())
     }
@@ -199,6 +230,9 @@ impl AnnotatedSyntaxTree {
                 DeclarationType::Struct => {
                     hlsl.push_str(&self.structs.pop_front().unwrap().generate_hlsl())
                 }
+                DeclarationType::ConstantBuffer => {
+                    hlsl.push_str(&self.constant_buffers.pop_front().unwrap().generate_hlsl())
+                }
             }
 
             hlsl.push('\n');
@@ -210,7 +244,7 @@ impl AnnotatedSyntaxTree {
     pub fn generate_glsl(mut self) -> (String, String) {
         // Write header
         let mut glsl_vertex =
-            format!("#version 330 core\n\n// Generated from Alexandria Common Shader Language\n\n");
+            format!("#version 430 core\n\n// Generated from Alexandria Common Shader Language\n\n");
         let mut glsl_frag = glsl_vertex.clone();
 
         // Write fragment output
@@ -287,6 +321,11 @@ impl AnnotatedSyntaxTree {
                     glsl_vertex.push_str(&glsl);
                     glsl_frag.push_str(&glsl);
                 }
+                DeclarationType::ConstantBuffer => {
+                    let glsl = self.constant_buffers.pop_front().unwrap().generate_glsl();
+                    glsl_vertex.push_str(&glsl);
+                    glsl_frag.push_str(&glsl);
+                }
             }
 
             glsl_vertex.push('\n');
@@ -296,8 +335,9 @@ impl AnnotatedSyntaxTree {
         (glsl_vertex, glsl_frag)
     }
 
-    fn verify_name(&self, name: &str) -> bool {
-        const BUILTIN_TYPENAMES: [&str; 5] = ["float", "float1", "float2", "float3", "float4"];
+    fn verify_type_name(&self, name: &str) -> bool {
+        const BUILTIN_TYPENAMES: &[&str] =
+            &["float", "float1", "float2", "float3", "float4", "float4x4"];
 
         for function in &self.functions {
             if function.name() == name {
@@ -312,7 +352,7 @@ impl AnnotatedSyntaxTree {
         }
 
         for builtin_name in BUILTIN_TYPENAMES {
-            if builtin_name == name {
+            if *builtin_name == name {
                 return false;
             }
         }

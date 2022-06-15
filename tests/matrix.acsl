@@ -1,0 +1,25 @@
+struct MatrixBuffer {
+    object: float4x4,
+    view: float4x4,
+}
+
+struct VertexInput {
+    position: float4 : POSITION,
+}
+
+struct PixelInput {
+    position: float4 : SV_POSITION,
+}
+
+cbuffer matrix_buffer: MatrixBuffer : 0;
+
+fn vertex_main(vertex_input: VertexInput) -> PixelInput {
+    return PixelInput {
+        position: vertex_input.position * 
+            (matrix_buffer.object * matrix_buffer.view),
+    };
+}
+
+fn fragment_main(pixel_input: PixelInput) -> float4 {
+    return float4(1.0, 1.0, 1.0, 1.0);
+}

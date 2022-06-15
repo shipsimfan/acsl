@@ -131,6 +131,7 @@ pub fn next_token(stream: &mut Stream) -> Result<Option<Token>, LexerError> {
                     "fn" => TokenClass::Fn,
                     "struct" => TokenClass::Struct,
                     "return" => TokenClass::Return,
+                    "cbuffer" => TokenClass::CBuffer,
                     _ => TokenClass::Identifier(identifier),
                 }
             } else if c.is_digit(10) {
@@ -162,6 +163,9 @@ pub fn next_token(stream: &mut Stream) -> Result<Option<Token>, LexerError> {
                     ';' => TokenClass::SemiColon,
                     ':' => TokenClass::Colon,
                     ',' => TokenClass::Comma,
+                    '<' => TokenClass::LeftAngleBracket,
+                    '>' => TokenClass::RightAngleBracket,
+                    '*' => TokenClass::Asterick,
                     _ => return Err(LexerError::UnknownCharacter(c, column, line)),
                 }
             }

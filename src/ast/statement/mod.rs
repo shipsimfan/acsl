@@ -7,6 +7,8 @@ use crate::{
     types::Type,
 };
 
+mod return_statement;
+
 pub enum Statement {
     Return(Expression),
 }
@@ -14,14 +16,7 @@ pub enum Statement {
 impl Statement {
     pub fn parse(stream: &mut Stream, first_token: Token) -> Result<Self, ParserError> {
         match first_token.class() {
-            TokenClass::Return => {
-                let (expression, next_token) = Expression::parse(stream)?;
-
-                match next_token.class() {
-                    TokenClass::SemiColon => Ok(Statement::Return(expression)),
-                    _ => return Err(ParserError::UnexpectedToken(next_token)),
-                }
-            }
+            TokenClass::Return => return_statement::parse(stream),
             _ => return Err(ParserError::UnexpectedToken(first_token)),
         }
     }
@@ -33,20 +28,12 @@ impl Statement {
         function_return_type: &Type,
     ) -> Result<annotated::statement::Statement, SemanticAnalysisError> {
         match self {
-            Statement::Return(expression) => {
-                let expression_type = expression.get_type(output_tree, scope)?;
-                if expression_type == *function_return_type {
-                    Ok(annotated::statement::Statement::Return(
-                        expression.semantic_analysis(output_tree, scope)?,
-                        expression_type,
-                    ))
-                } else {
-                    Err(SemanticAnalysisError::InvalidReturnType(
-                        expression_type.to_string(),
-                        function_return_type.to_string(),
-                    ))
-                }
-            }
+            Statement::Return(expression) => return_statement::semantic_analysis(
+                output_tree,
+                scope,
+                function_return_type,
+                expression,
+            ),
         }
     }
 }

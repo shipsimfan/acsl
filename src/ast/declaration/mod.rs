@@ -1,12 +1,14 @@
 use super::{code_block::CodeBlock, SemanticAnalysisError};
 use crate::annotated::AnnotatedSyntaxTree;
 
+pub mod constant_buffer;
 pub mod function;
 pub mod structure;
 
 pub enum Declaration {
     Function(String, Vec<(String, String)>, Option<String>, CodeBlock),
     Struct(String, Vec<(String, String, Option<String>)>),
+    ConstantBuffer(String, usize, String),
 }
 
 impl Declaration {
@@ -26,6 +28,9 @@ impl Declaration {
             Declaration::Struct(name, members) => {
                 output_tree.push_struct(structure::semantic_analysis(output_tree, name, members)?)
             }
+            Declaration::ConstantBuffer(name, slot, type_name) => output_tree.push_constant_buffer(
+                constant_buffer::semantic_analysis(output_tree, name, slot, type_name)?,
+            ),
         }
     }
 }
@@ -65,6 +70,9 @@ impl std::fmt::Display for Declaration {
                 }
 
                 Ok(())
+            }
+            Declaration::ConstantBuffer(name, slot, type_name) => {
+                writeln!(f, "Constant Buffer \"{}\" @ {} ({})", name, slot, type_name)
             }
         }
     }

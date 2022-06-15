@@ -5,6 +5,7 @@ pub enum Expression {
     StructCreation(String, Vec<Expression>),
     MemberAccess(String, String),
     Empty,
+    Multiply(Box<Expression>, Box<Expression>),
 }
 
 impl Expression {
@@ -59,6 +60,13 @@ impl Expression {
             }
             Expression::MemberAccess(variable_name, member_name) => {
                 format!("{}.{}", variable_name, member_name)
+            }
+            Expression::Multiply(left_expression, right_expression) => {
+                format!(
+                    "mul({}, {})",
+                    left_expression.hlsl(),
+                    right_expression.hlsl()
+                )
             }
         }
     }
@@ -122,6 +130,9 @@ impl Expression {
             }
             Expression::MemberAccess(variable_name, member_name) => {
                 format!("{}.{}", variable_name, member_name)
+            }
+            Expression::Multiply(left_expression, right_expression) => {
+                format!("({} * {})", left_expression.glsl(), right_expression.glsl())
             }
         }
     }
