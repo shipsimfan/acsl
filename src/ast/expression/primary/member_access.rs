@@ -28,7 +28,7 @@ pub fn semantic_analysis(
 ) -> Result<annotated::expression::Expression, SemanticAnalysisError> {
     // Verify variable and member exist
     let structure = scope.get_variable(&variable_name)?;
-    for (name, _) in structure.members() {
+    for (name, _) in structure.0.members() {
         if *name == member_name {
             return Ok(annotated::expression::Expression::MemberAccess(
                 variable_name,

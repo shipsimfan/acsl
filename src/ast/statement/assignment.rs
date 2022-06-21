@@ -26,7 +26,12 @@ pub fn semantic_analysis(
     expression: Expression,
 ) -> Result<annotated::statement::Statement, SemanticAnalysisError> {
     // Verify the variable has been defined
-    let variable_type = scope.get_variable(&name)?;
+    let (variable_type, mutable) = scope.get_variable(&name)?;
+
+    // Verify mutability
+    if !mutable {
+        return Err(SemanticAnalysisError::AssigningImmutableVariable(name));
+    }
 
     // Verify the type
     let expression_type = expression.get_type(output_tree, scope)?;

@@ -2,6 +2,7 @@ use crate::{
     ast::{scope::Scope, SemanticAnalysisError},
     types::Type,
 };
+use constant::Constant;
 use constant_buffer::ConstantBuffer;
 use function::Function;
 use std::{collections::VecDeque, rc::Rc};
@@ -9,6 +10,7 @@ use structure::Struct;
 use texture::Texture;
 
 pub mod code_block;
+pub mod constant;
 pub mod constant_buffer;
 pub mod expression;
 pub mod function;
@@ -21,11 +23,13 @@ enum DeclarationType {
     Struct,
     ConstantBuffer(usize),
     Texture(usize),
+    Constant,
 }
 
 pub struct AnnotatedSyntaxTree {
     functions: VecDeque<Function>,
     structs: VecDeque<Rc<Struct>>,
+    constants: VecDeque<Constant>,
 
     constant_buffers: Box<[Option<ConstantBuffer>]>,
     textures: Box<[Option<Texture>]>,
@@ -52,6 +56,7 @@ impl AnnotatedSyntaxTree {
         AnnotatedSyntaxTree {
             functions: VecDeque::new(),
             structs: VecDeque::new(),
+            constants: VecDeque::new(),
             constant_buffers: vec![None; MAX_CONSTANT_BUFFERS].into_boxed_slice(),
             textures: vec![None; MAX_TEXTURES].into_boxed_slice(),
             declaration_order: Vec::new(),
@@ -244,6 +249,7 @@ impl AnnotatedSyntaxTree {
         self.global_scope.define_variable(
             constant_buffer.name().to_owned(),
             constant_buffer.cb_type().clone(),
+            false,
         )?;
 
         let slot = constant_buffer.slot();
@@ -256,11 +262,24 @@ impl AnnotatedSyntaxTree {
 
     pub fn push_texture(&mut self, texture: Texture) -> Result<(), SemanticAnalysisError> {
         self.global_scope
-            .define_variable(texture.name().to_owned(), Type::texture())?;
+            .define_variable(texture.name().to_owned(), Type::texture(), false)?;
 
         let slot = texture.slot();
         self.textures[slot] = Some(texture);
         self.declaration_order.push(DeclarationType::Texture(slot));
+
+        Ok(())
+    }
+
+    pub fn push_constant(&mut self, constant: Constant) -> Result<(), SemanticAnalysisError> {
+        self.global_scope.define_variable(
+            constant.name().to_owned(),
+            constant.get_type().clone(),
+            false,
+        )?;
+
+        self.constants.push_back(constant);
+        self.declaration_order.push(DeclarationType::Constant);
 
         Ok(())
     }
@@ -281,6 +300,9 @@ impl AnnotatedSyntaxTree {
                 }
                 DeclarationType::Texture(slot) => {
                     hlsl.push_str(&self.textures[slot].take().unwrap().generate_hlsl())
+                }
+                DeclarationType::Constant => {
+                    hlsl.push_str(&self.constants.pop_front().unwrap().generate_hlsl())
                 }
             }
 
@@ -377,6 +399,11 @@ impl AnnotatedSyntaxTree {
                 }
                 DeclarationType::Texture(slot) => {
                     let glsl = self.textures[slot].take().unwrap().generate_glsl();
+                    glsl_vertex.push_str(&glsl);
+                    glsl_frag.push_str(&glsl);
+                }
+                DeclarationType::Constant => {
+                    let glsl = self.constants.pop_front().unwrap().generate_glsl();
                     glsl_vertex.push_str(&glsl);
                     glsl_frag.push_str(&glsl);
                 }

@@ -42,14 +42,14 @@ impl Expression {
             Expression::Empty => Ok(Type::void()),
             Expression::Variable(name) => scope
                 .get_variable(name)
-                .map(|variable_type| variable_type.clone()),
+                .map(|variable_type| variable_type.0.clone()),
             Expression::FunctionCall(name, _) => {
                 Ok(output_tree.get_function(name)?.return_type().clone())
             }
             Expression::FloatLiteral(_) => Ok(Type::float()),
             Expression::StructCreation(name, _) => output_tree.get_type(name),
             Expression::MemberAccess(variable_name, member) => {
-                scope.get_variable(variable_name)?.member_type(member)
+                scope.get_variable(variable_name)?.0.member_type(member)
             }
             Expression::Multiplicative(left_expression, op, right_expression) => left_expression
                 .get_type(output_tree, scope)?

@@ -26,9 +26,13 @@ pub fn parse_function(stream: &mut Stream) -> Result<Declaration, ParserError> {
     };
 
     loop {
-        let name = match name_token.take() {
+        let (name, mutable) = match name_token.take() {
             Some(token) => match token.class() {
-                TokenClass::Identifier(name) => name.to_owned(),
+                TokenClass::Identifier(name) => (name.to_owned(), false),
+                TokenClass::Mut => (
+                    next_token!(stream, TokenClass::Identifier(identifier) => {identifier.to_owned()}),
+                    true,
+                ),
                 _ => return Err(ParserError::UnexpectedToken(token)),
             },
             None => break,
@@ -39,7 +43,7 @@ pub fn parse_function(stream: &mut Stream) -> Result<Declaration, ParserError> {
         let type_name =
             next_token!(stream, TokenClass::Identifier(type_name) => {type_name.to_owned()});
 
-        parameters.push((name, type_name));
+        parameters.push((name, type_name, mutable));
 
         next_token!(stream,
             TokenClass::CloseParenthesis => {break},
@@ -71,17 +75,17 @@ pub fn parse_function(stream: &mut Stream) -> Result<Declaration, ParserError> {
 pub fn semantic_analysis(
     output_tree: &AnnotatedSyntaxTree,
     name: String,
-    parameters: Vec<(String, String)>,
+    parameters: Vec<(String, String, bool)>,
     return_type: Option<String>,
     code_block: CodeBlock,
 ) -> Result<annotated::function::Function, SemanticAnalysisError> {
     let mut f_parameters = Vec::with_capacity(parameters.len());
 
     let mut scope = output_tree.global_scope().new_child();
-    for (name, type_name) in parameters {
+    for (name, type_name, mutable) in parameters {
         let parameter_type = Type::from_name(&type_name, output_tree)?;
         f_parameters.push(FunctionParameter::new(name.clone(), parameter_type.clone()));
-        scope.define_variable(name, parameter_type)?;
+        scope.define_variable(name, parameter_type, mutable)?;
     }
 
     let return_type = match &return_type {

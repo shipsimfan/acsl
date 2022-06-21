@@ -132,8 +132,10 @@ pub fn next_token(stream: &mut Stream) -> Result<Option<Token>, LexerError> {
                     "struct" => TokenClass::Struct,
                     "return" => TokenClass::Return,
                     "cbuffer" => TokenClass::CBuffer,
+                    "const" => TokenClass::Const,
                     "type" => TokenClass::Type,
                     "let" => TokenClass::Let,
+                    "mut" => TokenClass::Mut,
                     _ => TokenClass::Identifier(identifier),
                 }
             } else if c.is_digit(10) {

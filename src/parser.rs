@@ -1,8 +1,9 @@
 use crate::{
     ast::{
         declaration::{
-            constant_buffer::parse_constant_buffer, function::parse_function,
-            structure::parse_struct, texture::parse_texture, type_alias::parse_type_alias,
+            constant::parse_constant, constant_buffer::parse_constant_buffer,
+            function::parse_function, structure::parse_struct, texture::parse_texture,
+            type_alias::parse_type_alias,
         },
         AbstractSyntaxTree,
     },
@@ -43,6 +44,7 @@ pub fn parse(code: &str) -> Result<AbstractSyntaxTree, ParserError> {
             TokenClass::Struct => parse_struct(&mut stream)?,
             TokenClass::CBuffer => parse_constant_buffer(&mut stream)?,
             TokenClass::Type => parse_type_alias(&mut stream)?,
+            TokenClass::Const => parse_constant(&mut stream)?,
             TokenClass::Identifier(identifier) => match identifier.as_str() {
                 "texture" => parse_texture(&mut stream)?,
                 _ => return Err(ParserError::UnexpectedToken(token)),

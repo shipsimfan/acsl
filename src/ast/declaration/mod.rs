@@ -1,6 +1,7 @@
-use super::{code_block::CodeBlock, SemanticAnalysisError};
+use super::{code_block::CodeBlock, expression::Expression, SemanticAnalysisError};
 use crate::annotated::AnnotatedSyntaxTree;
 
+pub mod constant;
 pub mod constant_buffer;
 pub mod function;
 pub mod structure;
@@ -8,11 +9,17 @@ pub mod texture;
 pub mod type_alias;
 
 pub enum Declaration {
-    Function(String, Vec<(String, String)>, Option<String>, CodeBlock),
+    Function(
+        String,
+        Vec<(String, String, bool)>,
+        Option<String>,
+        CodeBlock,
+    ),
     Struct(String, Vec<(String, String, Option<String>)>),
     ConstantBuffer(String, usize, String),
     Texture(String, usize),
     TypeAlias(String, String),
+    Constant(String, Expression),
 }
 
 impl Declaration {
@@ -41,6 +48,8 @@ impl Declaration {
             Declaration::TypeAlias(name, type_name) => {
                 type_alias::semantic_analysis(output_tree, name, type_name)
             }
+            Declaration::Constant(name, expression) => output_tree
+                .push_constant(constant::semantic_analysis(output_tree, name, expression)?),
         }
     }
 }
@@ -87,6 +96,9 @@ impl std::fmt::Display for Declaration {
             Declaration::Texture(name, slot) => writeln!(f, "Texture \"{}\" @ {}", name, slot),
             Declaration::TypeAlias(name, type_name) => {
                 writeln!(f, "Type Alias {} = {}", name, type_name)
+            }
+            Declaration::Constant(name, expression) => {
+                writeln!(f, "Constant \"{}\" = {}", name, expression)
             }
         }
     }

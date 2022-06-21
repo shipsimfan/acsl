@@ -50,3 +50,8 @@ fn texture() {
 fn type_alias() {
     run_test!("tests/type_alias");
 }
+
+#[test]
+fn constant() {
+    run_test!("tests/constants");
+}

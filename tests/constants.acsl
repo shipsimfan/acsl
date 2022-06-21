@@ -1,0 +1,19 @@
+struct VertexInput {
+    position: float4 : POSITION,
+}
+
+struct PixelInput {
+    position: float4 : SV_POSITION,
+}
+
+const PIXEL_COLOR = float4(1.0, 1.0, 1.0, 1.0);
+
+fn vertex_main(vertex_input: VertexInput) -> PixelInput {
+    return PixelInput {
+        position: vertex_input.position,
+    };
+}
+
+fn fragment_main(pixel_input: PixelInput) -> float4 {
+    return PIXEL_COLOR;
+}

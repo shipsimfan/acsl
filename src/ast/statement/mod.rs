@@ -13,7 +13,7 @@ mod variable_definition;
 
 pub enum Statement {
     Return(Expression),
-    VariableDefinition(String, Expression),
+    VariableDefinition(String, Expression, bool),
     Assignment(String, Expression),
 }
 
@@ -43,8 +43,14 @@ impl Statement {
             Statement::Assignment(name, expression) => {
                 assignment::semantic_analysis(output_tree, scope, name, expression)
             }
-            Statement::VariableDefinition(name, expression) => {
-                variable_definition::semantic_analysis(output_tree, scope, name, expression)
+            Statement::VariableDefinition(name, expression, mutable) => {
+                variable_definition::semantic_analysis(
+                    output_tree,
+                    scope,
+                    name,
+                    expression,
+                    mutable,
+                )
             }
         }
     }
@@ -55,8 +61,14 @@ impl std::fmt::Display for Statement {
         match self {
             Statement::Return(expression) => writeln!(f, "return {}", expression),
             Statement::Assignment(name, expression) => writeln!(f, "{} = {}", name, expression),
-            Statement::VariableDefinition(name, expression) => {
-                writeln!(f, "let {} = {}", name, expression)
+            Statement::VariableDefinition(name, expression, mutable) => {
+                writeln!(
+                    f,
+                    "let {}{} = {}",
+                    if *mutable { "mut " } else { "" },
+                    name,
+                    expression
+                )
             }
         }
     }

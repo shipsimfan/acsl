@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use super::SemanticAnalysisError;
 
 pub struct Scope {
-    variables: HashMap<String, Type>,
+    variables: HashMap<String, (Type, bool)>,
 }
 
 impl Scope {
@@ -20,9 +20,9 @@ impl Scope {
         }
     }
 
-    pub fn get_variable(&self, name: &str) -> Result<&Type, SemanticAnalysisError> {
+    pub fn get_variable(&self, name: &str) -> Result<&(Type, bool), SemanticAnalysisError> {
         match self.variables.get(name) {
-            Some(variable_type) => Ok(variable_type),
+            Some(variable) => Ok(variable),
             None => Err(SemanticAnalysisError::UnknownVariable(name.to_owned())),
         }
     }
@@ -31,13 +31,17 @@ impl Scope {
         &mut self,
         name: String,
         variable_type: Type,
+        mutable: bool,
     ) -> Result<(), SemanticAnalysisError> {
         // Builtin names for ACSL and GLSL
         if name.starts_with("acsl_") || name.starts_with("gl_") {
             return Err(SemanticAnalysisError::InvalidVariableName(name));
         }
 
-        match self.variables.insert(name.clone(), variable_type) {
+        match self
+            .variables
+            .insert(name.clone(), (variable_type, mutable))
+        {
             Some(_) => Err(SemanticAnalysisError::MultipleDefinition(name)),
             None => Ok(()),
         }

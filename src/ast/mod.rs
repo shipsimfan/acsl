@@ -36,6 +36,7 @@ pub enum SemanticAnalysisError {
     VariableTypeMismatch(String, String, String),
     ReusingSlot(&'static str, usize),
     SlotOutOfRange(&'static str, usize, usize),
+    AssigningImmutableVariable(String),
 }
 
 pub struct AbstractSyntaxTree {
@@ -126,6 +127,7 @@ impl std::fmt::Display for SemanticAnalysisError {
             SemanticAnalysisError::VariableTypeMismatch(name, actual, expected) => write!(f, "Attempting to set \"{}\" to type \"{}\" when it has a type of \"{}\"", name, actual, expected),
             SemanticAnalysisError::ReusingSlot(class, slot) => write!(f, "Reusing {} slot {}", class, slot),
             SemanticAnalysisError::SlotOutOfRange(class, slot, max) => write!(f, "Slot {} is beyond the max slot of {} for {}", slot, max, class),
+            SemanticAnalysisError::AssigningImmutableVariable(name) => write!(f, "Attempting to modify immutable variable \"{}\"", name)
         }
     }
 }
