@@ -39,10 +39,11 @@ impl ConstantBuffer {
 
     pub fn generate_hlsl(self) -> String {
         format!(
-            "ConstantBuffer<{}> {} : register(b{});\n",
+            "cbuffer acsl_constant_buffer_{} : register(b{}) {{\n    {} {};\n}}\n",
+            self.slot,
+            self.slot,
             self.cb_type.hlsl(),
-            self.name,
-            self.slot
+            self.name
         )
     }
 

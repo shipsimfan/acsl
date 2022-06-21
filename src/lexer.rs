@@ -179,7 +179,6 @@ pub fn next_token(stream: &mut Stream) -> Result<Option<Token>, LexerError> {
     };
 
     let token = Token::new(token_class, column, line);
-    println!("  {}", token);
     Ok(Some(token))
 }
 

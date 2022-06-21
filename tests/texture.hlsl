@@ -37,7 +37,9 @@ PixelInput acsl_create_PixelInput(float4 position, float4 color, float2 uv) {
     return output;
 }
 
-ConstantBuffer<MatrixBuffer> matrix_buffer : register(b0);
+cbuffer acsl_constant_buffer_0 : register(b0) {
+    MatrixBuffer matrix_buffer;
+}
 
 Texture2D tex : register(t0);
 SamplerState acsl_tex_sampler_state : register(s0);

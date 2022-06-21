@@ -29,7 +29,9 @@ PixelInput acsl_create_PixelInput(float4 position) {
     return output;
 }
 
-ConstantBuffer<MatrixBuffer> matrix_buffer : register(b0);
+cbuffer acsl_constant_buffer_0 : register(b0) {
+    MatrixBuffer matrix_buffer;
+}
 
 PixelInput vertex_main(VertexInput vertex_input) {
     return acsl_create_PixelInput(mul(vertex_input.position, mul(matrix_buffer.object, matrix_buffer.view)));

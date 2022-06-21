@@ -33,7 +33,9 @@ PixelInput acsl_create_PixelInput(float4 position, float4 color) {
     return output;
 }
 
-ConstantBuffer<MatrixBuffer> matrix_buffer : register(b0);
+cbuffer acsl_constant_buffer_0 : register(b0) {
+    MatrixBuffer matrix_buffer;
+}
 
 PixelInput vertex_main(VertexInput vertex_input) {
     float4 output_position = mul(vertex_input.position, mul(matrix_buffer.object, matrix_buffer.view));

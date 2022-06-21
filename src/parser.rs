@@ -33,8 +33,6 @@ macro_rules! next_token {
 }
 
 pub fn parse(code: &str) -> Result<AbstractSyntaxTree, ParserError> {
-    println!("Tokens:");
-
     let mut ast = AbstractSyntaxTree::new();
     let mut stream = Stream::new(code);
 
@@ -52,8 +50,6 @@ pub fn parse(code: &str) -> Result<AbstractSyntaxTree, ParserError> {
             _ => return Err(ParserError::UnexpectedToken(token)),
         })
     }
-
-    println!("\n{}", ast);
 
     Ok(ast)
 }
