@@ -5,12 +5,14 @@ pub mod constant_buffer;
 pub mod function;
 pub mod structure;
 pub mod texture;
+pub mod type_alias;
 
 pub enum Declaration {
     Function(String, Vec<(String, String)>, Option<String>, CodeBlock),
     Struct(String, Vec<(String, String, Option<String>)>),
     ConstantBuffer(String, usize, String),
     Texture(String, usize),
+    TypeAlias(String, String),
 }
 
 impl Declaration {
@@ -35,6 +37,9 @@ impl Declaration {
             ),
             Declaration::Texture(name, slot) => {
                 output_tree.push_texture(texture::semantic_analysis(name, slot)?)
+            }
+            Declaration::TypeAlias(name, type_name) => {
+                type_alias::semantic_analysis(output_tree, name, type_name)
             }
         }
     }
@@ -80,6 +85,9 @@ impl std::fmt::Display for Declaration {
                 writeln!(f, "Constant Buffer \"{}\" @ {} ({})", name, slot, type_name)
             }
             Declaration::Texture(name, slot) => writeln!(f, "Texture \"{}\" @ {}", name, slot),
+            Declaration::TypeAlias(name, type_name) => {
+                writeln!(f, "Type Alias {} = {}", name, type_name)
+            }
         }
     }
 }

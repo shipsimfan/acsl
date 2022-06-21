@@ -45,3 +45,8 @@ fn variables() {
 fn texture() {
     run_test!("tests/texture");
 }
+
+#[test]
+fn type_alias() {
+    run_test!("tests/type_alias");
+}

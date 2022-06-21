@@ -34,6 +34,7 @@ pub struct AnnotatedSyntaxTree {
 
     builtin_functions: Box<[Function]>,
 
+    type_aliases: Vec<(String, Type)>,
     global_scope: Scope,
 
     vertex_input_type: Option<Type>,
@@ -55,6 +56,7 @@ impl AnnotatedSyntaxTree {
             textures: vec![None; MAX_TEXTURES].into_boxed_slice(),
             declaration_order: Vec::new(),
             builtin_functions: Function::builtin_functions(),
+            type_aliases: Vec::new(),
             global_scope: Scope::new(),
             vertex_input_type: None,
             fragment_input_type: None,
@@ -102,6 +104,12 @@ impl AnnotatedSyntaxTree {
         for structure in &self.structs {
             if structure.name() == name {
                 return Ok(Type::Struct(structure.clone()));
+            }
+        }
+
+        for type_alias in &self.type_aliases {
+            if type_alias.0 == name {
+                return Ok(type_alias.1.clone());
             }
         }
 
@@ -211,6 +219,20 @@ impl AnnotatedSyntaxTree {
 
         self.declaration_order.push(DeclarationType::Struct);
         self.structs.push_back(Rc::new(structure));
+
+        Ok(())
+    }
+
+    pub fn push_type_alias(
+        &mut self,
+        name: String,
+        alias_type: Type,
+    ) -> Result<(), SemanticAnalysisError> {
+        if !self.verify_type_name(&name) {
+            return Err(SemanticAnalysisError::MultipleDefinition(name));
+        }
+
+        self.type_aliases.push((name, alias_type));
 
         Ok(())
     }
@@ -390,6 +412,12 @@ impl AnnotatedSyntaxTree {
 
         for structure in &self.structs {
             if structure.name() == name {
+                return false;
+            }
+        }
+
+        for type_alias in &self.type_aliases {
+            if type_alias.0 == name {
                 return false;
             }
         }

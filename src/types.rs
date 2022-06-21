@@ -8,6 +8,7 @@ use std::{rc::Rc, sync::Once};
 pub enum Type {
     Primitive(Primitive),
     Struct(Rc<Struct>),
+    Alias(Box<Type>),
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -28,6 +29,10 @@ static mut FLOAT3_MEMBERS: Option<Rc<Vec<(String, Type)>>> = None;
 static mut FLOAT4_MEMBERS: Option<Rc<Vec<(String, Type)>>> = None;
 
 impl Type {
+    pub fn alias(inner_type: Type) -> Self {
+        Type::Alias(Box::new(inner_type))
+    }
+
     pub fn void() -> Self {
         Type::Primitive(Primitive::Void)
     }
@@ -164,6 +169,7 @@ impl Type {
         let (members, name) = match self {
             Type::Primitive(primitive) => (primitive.members(), primitive.to_string()),
             Type::Struct(structure) => (structure.members(), structure.name().to_owned()),
+            Type::Alias(inner_type) => return inner_type.member_type(member),
         };
 
         for (name, member_type) in members {
@@ -182,6 +188,7 @@ impl Type {
         match self {
             Type::Primitive(primitive) => primitive.members(),
             Type::Struct(structure) => structure.members(),
+            Type::Alias(inner_type) => inner_type.members(),
         }
     }
 
@@ -199,6 +206,7 @@ impl Type {
                     other.to_string(),
                 ))
             }
+            Type::Alias(inner_type) => return inner_type.multiply_type(other, op),
         };
 
         let right_primitive = match other {
@@ -210,6 +218,7 @@ impl Type {
                     other.to_string(),
                 ))
             }
+            Type::Alias(inner_type) => return self.multiply_type(inner_type, op),
         };
 
         left_primitive.multiply_type(right_primitive, op)
@@ -219,6 +228,7 @@ impl Type {
         match self {
             Type::Primitive(primitive) => primitive.hlsl(),
             Type::Struct(structure) => structure.name().to_string(),
+            Type::Alias(inner_type) => inner_type.hlsl(),
         }
     }
 
@@ -226,6 +236,7 @@ impl Type {
         match self {
             Type::Primitive(primitive) => primitive.glsl(),
             Type::Struct(structure) => structure.name().to_string(),
+            Type::Alias(inner_type) => inner_type.glsl(),
         }
     }
 }
@@ -235,12 +246,15 @@ impl PartialEq for Type {
         match self {
             Type::Primitive(primitive1) => match other {
                 Type::Primitive(primitive2) => primitive1 == primitive2,
+                Type::Alias(inner_type) => self.eq(inner_type),
                 _ => false,
             },
             Type::Struct(struct1) => match other {
                 Type::Struct(struct2) => Rc::ptr_eq(struct1, struct2),
+                Type::Alias(inner_type) => self.eq(inner_type),
                 _ => false,
             },
+            Type::Alias(inner_type) => inner_type.as_ref().eq(other),
         }
     }
 }
@@ -250,6 +264,7 @@ impl std::fmt::Display for Type {
         match self {
             Type::Primitive(primitive) => write!(f, "{}", primitive),
             Type::Struct(structure) => write!(f, "{}", structure.name()),
+            Type::Alias(inner_type) => inner_type.fmt(f),
         }
     }
 }

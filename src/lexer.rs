@@ -132,6 +132,7 @@ pub fn next_token(stream: &mut Stream) -> Result<Option<Token>, LexerError> {
                     "struct" => TokenClass::Struct,
                     "return" => TokenClass::Return,
                     "cbuffer" => TokenClass::CBuffer,
+                    "type" => TokenClass::Type,
                     "let" => TokenClass::Let,
                     _ => TokenClass::Identifier(identifier),
                 }

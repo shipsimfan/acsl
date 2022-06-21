@@ -1,0 +1,19 @@
+type Vector = float4;
+
+struct VertexInput {
+    position: Vector : POSITION,
+}
+
+struct PixelInput {
+    position: Vector : SV_POSITION,
+}
+
+fn vertex_main(vertex_input: VertexInput) -> PixelInput {
+    return PixelInput {
+        position: vertex_input.position,
+    };
+}
+
+fn fragment_main(pixel_input: PixelInput) -> Vector {
+    return float4(1.0, 1.0, 1.0, 1.0);
+}
