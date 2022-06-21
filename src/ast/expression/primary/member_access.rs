@@ -1,5 +1,5 @@
 use crate::{
-    annotated,
+    annotated::{self, AnnotatedSyntaxTree},
     ast::{expression::Expression, scope::Scope, SemanticAnalysisError},
     lexer, next_token,
     parser::ParserError,
@@ -7,7 +7,10 @@ use crate::{
     tokens::{Token, TokenClass},
 };
 
-pub fn parse(stream: &mut Stream, identifier: &str) -> Result<(Expression, Token), ParserError> {
+pub fn parse(
+    stream: &mut Stream,
+    expression: Expression,
+) -> Result<(Expression, Token), ParserError> {
     let member = next_token!(stream, TokenClass::Identifier(identifier) => {identifier.to_owned()});
 
     let next_token = match lexer::next_token(stream)? {
@@ -16,29 +19,30 @@ pub fn parse(stream: &mut Stream, identifier: &str) -> Result<(Expression, Token
     };
 
     Ok((
-        Expression::MemberAccess(identifier.to_owned(), member),
+        Expression::MemberAccess(Box::new(expression), member),
         next_token,
     ))
 }
 
 pub fn semantic_analysis(
+    output_tree: &AnnotatedSyntaxTree,
     scope: &Scope,
-    variable_name: String,
+    expression: Box<Expression>,
     member_name: String,
 ) -> Result<annotated::expression::Expression, SemanticAnalysisError> {
     // Verify variable and member exist
-    let structure = scope.get_variable(&variable_name)?;
-    for (name, _) in structure.0.members() {
+    let structure = expression.get_type(output_tree, scope)?;
+    for (name, _) in structure.members() {
         if *name == member_name {
             return Ok(annotated::expression::Expression::MemberAccess(
-                variable_name,
+                Box::new(expression.semantic_analysis(output_tree, scope)?),
                 member_name,
             ));
         }
     }
 
     Err(SemanticAnalysisError::InvalidMember(
-        variable_name,
+        structure.to_string(),
         member_name,
     ))
 }

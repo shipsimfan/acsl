@@ -3,7 +3,7 @@ pub enum Expression {
     FunctionCall(String, Vec<Expression>),
     FloatLiteral(f64),
     StructCreation(String, Vec<Expression>),
-    MemberAccess(String, String),
+    MemberAccess(Box<Expression>, String),
     Empty,
     Multiply(Box<Expression>, Box<Expression>),
 }
@@ -65,8 +65,8 @@ impl Expression {
                     format!("{}", value)
                 }
             }
-            Expression::MemberAccess(variable_name, member_name) => {
-                format!("{}.{}", variable_name, member_name)
+            Expression::MemberAccess(expression, member_name) => {
+                format!("{}.{}", expression.hlsl(), member_name)
             }
             Expression::Multiply(left_expression, right_expression) => {
                 format!(
@@ -140,8 +140,8 @@ impl Expression {
                     format!("{}", value)
                 }
             }
-            Expression::MemberAccess(variable_name, member_name) => {
-                format!("{}.{}", variable_name, member_name)
+            Expression::MemberAccess(expression, member_name) => {
+                format!("{}.{}", expression.glsl(), member_name)
             }
             Expression::Multiply(left_expression, right_expression) => {
                 format!("({} * {})", left_expression.glsl(), right_expression.glsl())

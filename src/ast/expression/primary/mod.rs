@@ -1,6 +1,6 @@
 use super::Expression;
 use crate::{
-    lexer,
+    lexer, next_token,
     parser::ParserError,
     stream::Stream,
     tokens::{Token, TokenClass},
@@ -14,7 +14,7 @@ pub mod struct_creation;
 pub mod variable;
 
 pub fn parse(stream: &mut Stream) -> Result<(Expression, Token), ParserError> {
-    match lexer::next_token(stream)? {
+    let (mut expression, mut next_token) = match lexer::next_token(stream)? {
         Some(token) => match token.class() {
             TokenClass::OpenParenthesis => {
                 let (expression, next_token) = Expression::parse(stream)?;
@@ -33,7 +33,9 @@ pub fn parse(stream: &mut Stream) -> Result<(Expression, Token), ParserError> {
                 Some(next_token) => match next_token.class() {
                     TokenClass::OpenParenthesis => function_call::parse(stream, identifier),
                     TokenClass::OpenCurlyBrace => struct_creation::parse(stream, identifier),
-                    TokenClass::Period => member_access::parse(stream, identifier),
+                    TokenClass::Period => {
+                        member_access::parse(stream, Expression::Variable(identifier.to_owned()))
+                    }
                     _ => variable::parse(identifier, next_token),
                 },
                 None => Err(ParserError::UnexpectedEOF),
@@ -41,5 +43,22 @@ pub fn parse(stream: &mut Stream) -> Result<(Expression, Token), ParserError> {
             _ => empty::parse(token),
         },
         None => Err(ParserError::UnexpectedEOF),
+    }?;
+
+    loop {
+        match next_token.class() {
+            TokenClass::Period => {}
+            _ => return Ok((expression, next_token)),
+        }
+
+        let member =
+            next_token!(stream, TokenClass::Identifier(identifier) => {identifier.to_owned()});
+
+        expression = Expression::MemberAccess(Box::new(expression), member);
+
+        next_token = match lexer::next_token(stream)? {
+            Some(token) => token,
+            None => return Err(ParserError::UnexpectedEOF),
+        }
     }
 }

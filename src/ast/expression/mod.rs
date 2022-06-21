@@ -13,7 +13,7 @@ pub enum Expression {
     FunctionCall(String, Vec<Expression>),
     FloatLiteral(f64),
     StructCreation(String, Vec<(String, Expression)>),
-    MemberAccess(String, String),
+    MemberAccess(Box<Expression>, String),
     Empty,
 
     // Multiplicative Expressions
@@ -48,8 +48,8 @@ impl Expression {
             }
             Expression::FloatLiteral(_) => Ok(Type::float()),
             Expression::StructCreation(name, _) => output_tree.get_type(name),
-            Expression::MemberAccess(variable_name, member) => {
-                scope.get_variable(variable_name)?.0.member_type(member)
+            Expression::MemberAccess(expression, member) => {
+                expression.get_type(output_tree, scope)?.member_type(member)
             }
             Expression::Multiplicative(left_expression, op, right_expression) => left_expression
                 .get_type(output_tree, scope)?
@@ -72,8 +72,13 @@ impl Expression {
             Expression::StructCreation(name, members) => {
                 primary::struct_creation::semantic_analysis(output_tree, scope, name, members)
             }
-            Expression::MemberAccess(variable_name, member_name) => {
-                primary::member_access::semantic_analysis(scope, variable_name, member_name)
+            Expression::MemberAccess(expression, member_name) => {
+                primary::member_access::semantic_analysis(
+                    output_tree,
+                    scope,
+                    expression,
+                    member_name,
+                )
             }
             Expression::Multiplicative(left_expression, op, right_expression) => {
                 multiplicative::semantic_analysis(
