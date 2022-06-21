@@ -33,6 +33,9 @@ pub enum SemanticAnalysisError {
     AllFieldsNeedSemantics(String),
     InvalidVariableName(String),
     InvalidOperation(String, String, String),
+    VariableTypeMismatch(String, String, String),
+    ReusingSlot(&'static str, usize),
+    SlotOutOfRange(&'static str, usize, usize),
 }
 
 pub struct AbstractSyntaxTree {
@@ -120,6 +123,9 @@ impl std::fmt::Display for SemanticAnalysisError {
             SemanticAnalysisError::AllFieldsNeedSemantics(structure_name) => write!(f, "All fields require semantics when they are defined, and \"{}\" is missing some", structure_name),
             SemanticAnalysisError::InvalidVariableName(name) => write!(f, "Invalid variable name \"{}\", variables beginning with \"gl_\" or \"acsl_\" are reserved.", name),
             SemanticAnalysisError::InvalidOperation(left_type, op, right_type) => write!(f, "Unable to perform operation \"{}\" on types \"{}\" and \"{}\"", op, left_type, right_type),
+            SemanticAnalysisError::VariableTypeMismatch(name, actual, expected) => write!(f, "Attempting to set \"{}\" to type \"{}\" when it has a type of \"{}\"", name, actual, expected),
+            SemanticAnalysisError::ReusingSlot(class, slot) => write!(f, "Reusing {} slot {}", class, slot),
+            SemanticAnalysisError::SlotOutOfRange(class, slot, max) => write!(f, "Slot {} is beyond the max slot of {} for {}", slot, max, class),
         }
     }
 }

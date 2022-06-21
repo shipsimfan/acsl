@@ -13,8 +13,15 @@ impl Expression {
         match self {
             Expression::Empty => String::new(),
             Expression::Variable(variable) => variable,
-            Expression::FunctionCall(name, parameters) => {
-                let mut string = format!("{}(", name);
+            Expression::FunctionCall(name, mut parameters) => {
+                let mut string = if name == "sample_texture" {
+                    format!(
+                        "{0}.Sample(acsl_{0}_sampler_state, ",
+                        parameters.remove(0).hlsl()
+                    )
+                } else {
+                    format!("{}(", name)
+                };
 
                 let mut i = 0;
                 let parameters_len = parameters.len();
@@ -33,7 +40,7 @@ impl Expression {
                 string
             }
             Expression::StructCreation(name, members) => {
-                let mut hlsl = format!("{}(", name);
+                let mut hlsl = format!("acsl_create_{}(", name);
 
                 let mut i = 0;
                 let last = members.len();
@@ -81,6 +88,7 @@ impl Expression {
                     "float2" => "vec2",
                     "float3" => "vec3",
                     "float4" => "vec4",
+                    "sample_texture" => "texture",
                     _ => &name,
                 };
 
@@ -103,7 +111,11 @@ impl Expression {
                 string
             }
             Expression::StructCreation(name, members) => {
-                let mut glsl = format!("{}(", name);
+                let mut glsl = if name == "sample_texture" {
+                    format!("texture(")
+                } else {
+                    format!("{}(", name)
+                };
 
                 let mut i = 0;
                 let last = members.len();

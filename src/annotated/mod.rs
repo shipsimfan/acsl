@@ -6,6 +6,7 @@ use constant_buffer::ConstantBuffer;
 use function::Function;
 use std::{collections::VecDeque, rc::Rc};
 use structure::Struct;
+use texture::Texture;
 
 pub mod code_block;
 pub mod constant_buffer;
@@ -13,18 +14,21 @@ pub mod expression;
 pub mod function;
 pub mod statement;
 pub mod structure;
+pub mod texture;
 
 enum DeclarationType {
     Function,
     Struct,
-    ConstantBuffer,
+    ConstantBuffer(usize),
+    Texture(usize),
 }
 
 pub struct AnnotatedSyntaxTree {
     functions: VecDeque<Function>,
     structs: VecDeque<Rc<Struct>>,
 
-    constant_buffers: VecDeque<ConstantBuffer>,
+    constant_buffers: Box<[Option<ConstantBuffer>]>,
+    textures: Box<[Option<Texture>]>,
 
     declaration_order: Vec<DeclarationType>,
 
@@ -36,12 +40,19 @@ pub struct AnnotatedSyntaxTree {
     fragment_input_type: Option<Type>,
 }
 
+pub const MAX_CONSTANT_BUFFERS: usize = 32;
+pub const MAX_TEXTURES: usize = 8;
+
+pub const CONSTANT_BUFFER_INDEX: usize = 0;
+pub const TEXTURES_INDEX: usize = MAX_CONSTANT_BUFFERS;
+
 impl AnnotatedSyntaxTree {
     pub fn new() -> Self {
         AnnotatedSyntaxTree {
             functions: VecDeque::new(),
             structs: VecDeque::new(),
-            constant_buffers: VecDeque::new(),
+            constant_buffers: vec![None; MAX_CONSTANT_BUFFERS].into_boxed_slice(),
+            textures: vec![None; MAX_TEXTURES].into_boxed_slice(),
             declaration_order: Vec::new(),
             builtin_functions: Function::builtin_functions(),
             global_scope: Scope::new(),
@@ -213,8 +224,21 @@ impl AnnotatedSyntaxTree {
             constant_buffer.cb_type().clone(),
         )?;
 
-        self.constant_buffers.push_back(constant_buffer);
-        self.declaration_order.push(DeclarationType::ConstantBuffer);
+        let slot = constant_buffer.slot();
+        self.constant_buffers[slot] = Some(constant_buffer);
+        self.declaration_order
+            .push(DeclarationType::ConstantBuffer(slot));
+
+        Ok(())
+    }
+
+    pub fn push_texture(&mut self, texture: Texture) -> Result<(), SemanticAnalysisError> {
+        self.global_scope
+            .define_variable(texture.name().to_owned(), Type::texture())?;
+
+        let slot = texture.slot();
+        self.textures[slot] = Some(texture);
+        self.declaration_order.push(DeclarationType::Texture(slot));
 
         Ok(())
     }
@@ -230,8 +254,11 @@ impl AnnotatedSyntaxTree {
                 DeclarationType::Struct => {
                     hlsl.push_str(&self.structs.pop_front().unwrap().generate_hlsl())
                 }
-                DeclarationType::ConstantBuffer => {
-                    hlsl.push_str(&self.constant_buffers.pop_front().unwrap().generate_hlsl())
+                DeclarationType::ConstantBuffer(slot) => {
+                    hlsl.push_str(&self.constant_buffers[slot].take().unwrap().generate_hlsl())
+                }
+                DeclarationType::Texture(slot) => {
+                    hlsl.push_str(&self.textures[slot].take().unwrap().generate_hlsl())
                 }
             }
 
@@ -321,8 +348,13 @@ impl AnnotatedSyntaxTree {
                     glsl_vertex.push_str(&glsl);
                     glsl_frag.push_str(&glsl);
                 }
-                DeclarationType::ConstantBuffer => {
-                    let glsl = self.constant_buffers.pop_front().unwrap().generate_glsl();
+                DeclarationType::ConstantBuffer(slot) => {
+                    let glsl = self.constant_buffers[slot].take().unwrap().generate_glsl();
+                    glsl_vertex.push_str(&glsl);
+                    glsl_frag.push_str(&glsl);
+                }
+                DeclarationType::Texture(slot) => {
+                    let glsl = self.textures[slot].take().unwrap().generate_glsl();
                     glsl_vertex.push_str(&glsl);
                     glsl_frag.push_str(&glsl);
                 }
@@ -336,8 +368,19 @@ impl AnnotatedSyntaxTree {
     }
 
     fn verify_type_name(&self, name: &str) -> bool {
-        const BUILTIN_TYPENAMES: &[&str] =
-            &["float", "float1", "float2", "float3", "float4", "float4x4"];
+        const BUILTIN_TYPENAMES: &[&str] = &[
+            "float", "float1", "float2", "float3", "float4", "float4x4", "texture",
+        ];
+
+        const RESERVED_TYPENAMES: &[&str] = &[
+            "vec1",
+            "vec2",
+            "vec3",
+            "vec4",
+            "mat",
+            "sampler2D",
+            "Texture2D",
+        ];
 
         for function in &self.functions {
             if function.name() == name {
@@ -353,6 +396,12 @@ impl AnnotatedSyntaxTree {
 
         for builtin_name in BUILTIN_TYPENAMES {
             if *builtin_name == name {
+                return false;
+            }
+        }
+
+        for reserved_name in RESERVED_TYPENAMES {
+            if *reserved_name == name {
                 return false;
             }
         }

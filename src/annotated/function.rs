@@ -67,6 +67,14 @@ impl Function {
                 ],
                 Type::float4(),
             ),
+            Function::new_builtin(
+                "sample_texture".to_owned(),
+                vec![
+                    FunctionParameter::new("texture".to_owned(), Type::texture()),
+                    FunctionParameter::new("coordinates".to_owned(), Type::float2()),
+                ],
+                Type::float4(),
+            ),
         ]
         .into_boxed_slice()
     }

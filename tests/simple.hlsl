@@ -3,13 +3,23 @@
 struct VertexInput {
     float4 position: POSITION;
 };
+VertexInput acsl_create_VertexInput(float4 position) {
+    VertexInput output;
+    output.position = position;
+    return output;
+}
 
 struct PixelInput {
     float4 position: SV_POSITION;
 };
+PixelInput acsl_create_PixelInput(float4 position) {
+    PixelInput output;
+    output.position = position;
+    return output;
+}
 
 PixelInput vertex_main(VertexInput vertex_input) {
-    return PixelInput(vertex_input.position);
+    return acsl_create_PixelInput(vertex_input.position);
 }
 
 float4 fragment_main(PixelInput pixel_input) : SV_TARGET {

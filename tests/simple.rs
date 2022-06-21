@@ -35,3 +35,13 @@ fn simple_1() {
 fn matrix() {
     run_test!("tests/matrix");
 }
+
+#[test]
+fn variables() {
+    run_test!("tests/variables");
+}
+
+#[test]
+fn texture() {
+    run_test!("tests/texture");
+}

@@ -2,8 +2,9 @@
 pub enum TokenClass {
     Fn,
     Struct,
-    Return,
     CBuffer,
+    Return,
+    Let,
     Identifier(String),
     FloatLiteral(f64),
     IntegerLiteral(usize),
@@ -19,6 +20,7 @@ pub enum TokenClass {
     Comma,
     LeftAngleBracket,
     RightAngleBracket,
+    Equal,
     Asterick,
 }
 
@@ -54,8 +56,9 @@ impl std::fmt::Display for TokenClass {
         match self {
             TokenClass::Fn => write!(f, "fn"),
             TokenClass::Struct => write!(f, "struct"),
-            TokenClass::Return => write!(f, "return"),
             TokenClass::CBuffer => write!(f, "cbuffer"),
+            TokenClass::Return => write!(f, "return"),
+            TokenClass::Let => write!(f, "let"),
             TokenClass::Identifier(identifier) => write!(f, "\"{}\"", identifier),
             TokenClass::FloatLiteral(value) => write!(f, "{}", value),
             TokenClass::IntegerLiteral(value) => write!(f, "{}", value),
@@ -71,6 +74,7 @@ impl std::fmt::Display for TokenClass {
             TokenClass::Comma => write!(f, ","),
             TokenClass::LeftAngleBracket => write!(f, "<"),
             TokenClass::RightAngleBracket => write!(f, ">"),
+            TokenClass::Equal => write!(f, "="),
             TokenClass::Asterick => write!(f, "*"),
         }
     }

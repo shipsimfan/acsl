@@ -7,17 +7,23 @@ use crate::{
     types::Type,
 };
 
+mod assignment;
 mod return_statement;
+mod variable_definition;
 
 pub enum Statement {
     Return(Expression),
+    VariableDefinition(String, Expression),
+    Assignment(String, Expression),
 }
 
 impl Statement {
     pub fn parse(stream: &mut Stream, first_token: Token) -> Result<Self, ParserError> {
         match first_token.class() {
             TokenClass::Return => return_statement::parse(stream),
-            _ => return Err(ParserError::UnexpectedToken(first_token)),
+            TokenClass::Identifier(name) => assignment::parse(stream, name),
+            TokenClass::Let => variable_definition::parse(stream),
+            _ => Err(ParserError::UnexpectedToken(first_token)),
         }
     }
 
@@ -34,6 +40,12 @@ impl Statement {
                 function_return_type,
                 expression,
             ),
+            Statement::Assignment(name, expression) => {
+                assignment::semantic_analysis(output_tree, scope, name, expression)
+            }
+            Statement::VariableDefinition(name, expression) => {
+                variable_definition::semantic_analysis(output_tree, scope, name, expression)
+            }
         }
     }
 }
@@ -42,6 +54,10 @@ impl std::fmt::Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Statement::Return(expression) => writeln!(f, "return {}", expression),
+            Statement::Assignment(name, expression) => writeln!(f, "{} = {}", name, expression),
+            Statement::VariableDefinition(name, expression) => {
+                writeln!(f, "let {} = {}", name, expression)
+            }
         }
     }
 }

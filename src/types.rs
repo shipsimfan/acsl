@@ -16,6 +16,7 @@ pub enum Primitive {
     Float,
     FloatVec(usize),
     FloatMatrix(usize, usize),
+    Texture,
 }
 
 static INIT_MEMBERS: Once = Once::new();
@@ -35,84 +36,98 @@ impl Type {
         Type::Primitive(Primitive::Float)
     }
 
+    pub fn floatn(n: usize) -> Self {
+        assert!(n <= 4 && n >= 1);
+        Type::Primitive(Primitive::FloatVec(n))
+    }
+
     pub fn float1() -> Self {
-        Type::Primitive(Primitive::FloatVec(1))
+        Type::floatn(1)
     }
 
     pub fn float2() -> Self {
-        Type::Primitive(Primitive::FloatVec(2))
+        Type::floatn(2)
     }
 
     pub fn float3() -> Self {
-        Type::Primitive(Primitive::FloatVec(3))
+        Type::floatn(3)
     }
 
     pub fn float4() -> Self {
-        Type::Primitive(Primitive::FloatVec(4))
+        Type::floatn(4)
+    }
+
+    pub fn floatnxm(n: usize, m: usize) -> Self {
+        assert!(n <= 4 && n >= 1 && m <= 4 && m >= 1);
+        Type::Primitive(Primitive::FloatMatrix(n, m))
     }
 
     pub fn float1x1() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(1, 1))
+        Type::floatnxm(1, 1)
     }
 
     pub fn float1x2() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(1, 2))
+        Type::floatnxm(1, 2)
     }
 
     pub fn float1x3() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(1, 3))
+        Type::floatnxm(1, 3)
     }
 
     pub fn float1x4() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(1, 4))
+        Type::floatnxm(1, 4)
     }
 
     pub fn float2x1() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(2, 1))
+        Type::floatnxm(2, 1)
     }
 
     pub fn float2x2() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(2, 2))
+        Type::floatnxm(2, 2)
     }
 
     pub fn float2x3() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(2, 3))
+        Type::floatnxm(2, 3)
     }
 
     pub fn float2x4() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(2, 4))
+        Type::floatnxm(2, 4)
     }
 
     pub fn float3x1() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(3, 1))
+        Type::floatnxm(3, 1)
     }
 
     pub fn float3x2() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(3, 2))
+        Type::floatnxm(3, 2)
     }
 
     pub fn float3x3() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(3, 3))
+        Type::floatnxm(3, 3)
     }
 
     pub fn float3x4() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(3, 4))
+        Type::floatnxm(3, 4)
     }
 
     pub fn float4x1() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(4, 1))
+        Type::floatnxm(4, 1)
     }
 
     pub fn float4x2() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(4, 2))
+        Type::floatnxm(4, 2)
     }
 
     pub fn float4x3() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(4, 3))
+        Type::floatnxm(4, 3)
     }
 
     pub fn float4x4() -> Self {
-        Type::Primitive(Primitive::FloatMatrix(4, 4))
+        Type::floatnxm(4, 4)
+    }
+
+    pub fn texture() -> Self {
+        Type::Primitive(Primitive::Texture)
     }
 
     pub fn from_name(
@@ -245,7 +260,6 @@ impl Primitive {
 
         unsafe {
             match self {
-                Primitive::Void => &[],
                 Primitive::Float => FLOAT_MEMBERS.as_ref().unwrap(),
                 Primitive::FloatVec(dimension) => match dimension {
                     1 => FLOAT_MEMBERS.as_ref().unwrap(),
@@ -254,7 +268,7 @@ impl Primitive {
                     4 => FLOAT4_MEMBERS.as_ref().unwrap(),
                     _ => panic!("Invalid float vector dimension"),
                 },
-                Primitive::FloatMatrix(_, _) => &[],
+                Primitive::FloatMatrix(_, _) | Primitive::Void | Primitive::Texture => &[],
             }
         }
     }
@@ -265,7 +279,7 @@ impl Primitive {
         op: MultiplyClass,
     ) -> Result<Type, SemanticAnalysisError> {
         match self {
-            Primitive::Void => Err(SemanticAnalysisError::InvalidOperation(
+            Primitive::Void | Primitive::Texture => Err(SemanticAnalysisError::InvalidOperation(
                 self.to_string(),
                 op.to_string(),
                 other.to_string(),
@@ -276,11 +290,13 @@ impl Primitive {
                     Ok(Type::Primitive(Primitive::FloatVec(*dimension)))
                 }
                 Primitive::FloatMatrix(n, m) => Ok(Type::Primitive(Primitive::FloatMatrix(*n, *m))),
-                Primitive::Void => Err(SemanticAnalysisError::InvalidOperation(
-                    self.to_string(),
-                    op.to_string(),
-                    other.to_string(),
-                )),
+                Primitive::Void | Primitive::Texture => {
+                    Err(SemanticAnalysisError::InvalidOperation(
+                        self.to_string(),
+                        op.to_string(),
+                        other.to_string(),
+                    ))
+                }
             },
             Primitive::FloatVec(left_dimension) => match other {
                 Primitive::Float => Ok(Type::Primitive(Primitive::FloatVec(*left_dimension))),
@@ -300,11 +316,13 @@ impl Primitive {
                         other.to_string(),
                     )),
                 },
-                Primitive::Void => Err(SemanticAnalysisError::InvalidOperation(
-                    self.to_string(),
-                    op.to_string(),
-                    other.to_string(),
-                )),
+                Primitive::Void | Primitive::Texture => {
+                    Err(SemanticAnalysisError::InvalidOperation(
+                        self.to_string(),
+                        op.to_string(),
+                        other.to_string(),
+                    ))
+                }
             },
             Primitive::FloatMatrix(left_n, left_m) => match other {
                 Primitive::Float => Ok(Type::Primitive(Primitive::FloatMatrix(*left_n, *left_m))),
@@ -319,11 +337,13 @@ impl Primitive {
                 Primitive::FloatMatrix(_, right_m) => {
                     Ok(Type::Primitive(Primitive::FloatMatrix(*left_n, *right_m)))
                 }
-                Primitive::Void => Err(SemanticAnalysisError::InvalidOperation(
-                    self.to_string(),
-                    op.to_string(),
-                    other.to_string(),
-                )),
+                Primitive::Void | Primitive::Texture => {
+                    Err(SemanticAnalysisError::InvalidOperation(
+                        self.to_string(),
+                        op.to_string(),
+                        other.to_string(),
+                    ))
+                }
             },
         }
     }
@@ -334,6 +354,7 @@ impl Primitive {
             Primitive::Float => "float".to_owned(),
             Primitive::FloatVec(dimension) => format!("float{}", dimension),
             Primitive::FloatMatrix(n, m) => format!("float{}x{}", n, m),
+            Primitive::Texture => "Texture2D".to_owned(),
         }
     }
 
@@ -343,6 +364,7 @@ impl Primitive {
             Primitive::Float => "float".to_owned(),
             Primitive::FloatVec(dimension) => format!("vec{}", dimension),
             Primitive::FloatMatrix(n, m) => format!("mat{}x{}", m, n),
+            Primitive::Texture => "sampler2D".to_owned(),
         }
     }
 
@@ -383,6 +405,7 @@ impl std::fmt::Display for Primitive {
             Primitive::Float => write!(f, "float"),
             Primitive::FloatVec(dimension) => write!(f, "float{}", dimension),
             Primitive::FloatMatrix(n, m) => write!(f, "float{}x{}", n, m),
+            Primitive::Texture => write!(f, "texture"),
         }
     }
 }

@@ -3,12 +3,25 @@ use crate::types::Type;
 
 pub enum Statement {
     Return(Expression, Type),
+    Assignment(String, Expression),
+    VariableDefinition(String, Expression, Type),
 }
 
 impl Statement {
     pub fn hlsl(self) -> String {
         match self {
             Statement::Return(expression, _) => format!("return {};\n", expression.hlsl()),
+            Statement::Assignment(name, expression) => {
+                format!("{} = {};\n", name, expression.hlsl())
+            }
+            Statement::VariableDefinition(name, expression, variable_type) => {
+                format!(
+                    "{} {} = {};\n",
+                    variable_type.hlsl(),
+                    name,
+                    expression.hlsl()
+                )
+            }
         }
     }
 
@@ -64,6 +77,15 @@ impl Statement {
                 } else {
                     format!("return {};\n", expression.glsl())
                 }
+            }
+            Statement::VariableDefinition(name, expression, variable_type) => format!(
+                "{} {} = {};\n",
+                variable_type.glsl(),
+                name,
+                expression.glsl()
+            ),
+            Statement::Assignment(name, expression) => {
+                format!("{} = {};\n", name, expression.glsl())
             }
         }
     }

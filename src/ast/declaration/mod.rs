@@ -4,11 +4,13 @@ use crate::annotated::AnnotatedSyntaxTree;
 pub mod constant_buffer;
 pub mod function;
 pub mod structure;
+pub mod texture;
 
 pub enum Declaration {
     Function(String, Vec<(String, String)>, Option<String>, CodeBlock),
     Struct(String, Vec<(String, String, Option<String>)>),
     ConstantBuffer(String, usize, String),
+    Texture(String, usize),
 }
 
 impl Declaration {
@@ -31,6 +33,9 @@ impl Declaration {
             Declaration::ConstantBuffer(name, slot, type_name) => output_tree.push_constant_buffer(
                 constant_buffer::semantic_analysis(output_tree, name, slot, type_name)?,
             ),
+            Declaration::Texture(name, slot) => {
+                output_tree.push_texture(texture::semantic_analysis(name, slot)?)
+            }
         }
     }
 }
@@ -74,6 +79,7 @@ impl std::fmt::Display for Declaration {
             Declaration::ConstantBuffer(name, slot, type_name) => {
                 writeln!(f, "Constant Buffer \"{}\" @ {} ({})", name, slot, type_name)
             }
+            Declaration::Texture(name, slot) => writeln!(f, "Texture \"{}\" @ {}", name, slot),
         }
     }
 }

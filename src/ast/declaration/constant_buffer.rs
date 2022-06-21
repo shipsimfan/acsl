@@ -32,9 +32,9 @@ pub fn semantic_analysis(
     slot: usize,
     type_name: String,
 ) -> Result<annotated::constant_buffer::ConstantBuffer, SemanticAnalysisError> {
-    Ok(annotated::constant_buffer::ConstantBuffer::new(
+    annotated::constant_buffer::ConstantBuffer::new(
         name,
         slot,
         Type::from_name(&type_name, output_tree)?,
-    ))
+    )
 }
