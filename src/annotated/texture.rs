@@ -31,8 +31,8 @@ impl Texture {
 
     pub fn generate_hlsl(self) -> String {
         format!(
-            "Texture2D {} : register(t{});\nSamplerState acsl_tex_sampler_state : register(s{});\n",
-            self.name, self.slot, self.slot
+            "Texture2D {} : register(t{});\nSamplerState acsl_{}_sampler_state : register(s{});\n",
+            self.name, self.slot, self.name, self.slot
         )
     }
 
