@@ -53,7 +53,7 @@ impl Expression {
             }
             Expression::Multiplicative(left_expression, op, right_expression) => left_expression
                 .get_type(output_tree, scope)?
-                .multiply_type(&right_expression.get_type(output_tree, scope)?, *op),
+                .product_type(&right_expression.get_type(output_tree, scope)?, *op),
         }
     }
 

@@ -5,6 +5,7 @@ use crate::{
     parser::ParserError,
     stream::Stream,
     tokens::{Token, TokenClass},
+    types::Type,
 };
 
 pub fn parse(stream: &mut Stream, identifier: &str) -> Result<(Expression, Token), ParserError> {
@@ -50,11 +51,11 @@ pub fn semantic_analysis(
 
     let mut s_members = Vec::new();
 
-    for (s_name, s_type) in structure.members() {
+    for (member_name, member_type) in structure.members() {
         // Locate defined value
         let mut index = None;
         for i in 0..members.len() {
-            if members[i].0 == *s_name {
+            if members[i].0 == *member_name {
                 index = Some(i);
                 break;
             }
@@ -65,19 +66,19 @@ pub fn semantic_analysis(
             None => {
                 return Err(SemanticAnalysisError::MissingStructureMember(
                     name,
-                    s_name.clone(),
+                    member_name.clone(),
                 ))
             }
         };
 
         // Verify type
         let e_type = expression.get_type(output_tree, scope)?;
-        if *s_type != e_type {
+        if *member_type != e_type {
             return Err(SemanticAnalysisError::InvalidMemberType(
                 name,
-                s_name.to_string(),
+                member_name.to_string(),
                 e_type.to_string(),
-                s_type.to_string(),
+                member_type.to_string(),
             ));
         }
 
@@ -89,6 +90,8 @@ pub fn semantic_analysis(
     }
 
     Ok(annotated::expression::Expression::StructCreation(
-        name, s_members,
+        name,
+        s_members,
+        Type::Struct(structure.clone()),
     ))
 }

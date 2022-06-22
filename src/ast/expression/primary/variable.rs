@@ -13,6 +13,9 @@ pub fn semantic_analysis(
     scope: &Scope,
     variable: String,
 ) -> Result<annotated::expression::Expression, SemanticAnalysisError> {
-    scope.get_variable(&variable)?;
-    Ok(annotated::expression::Expression::Variable(variable))
+    let (variable_type, _) = scope.get_variable(&variable)?;
+    Ok(annotated::expression::Expression::Variable(
+        variable,
+        variable_type.clone(),
+    ))
 }

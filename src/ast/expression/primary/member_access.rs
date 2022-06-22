@@ -32,11 +32,12 @@ pub fn semantic_analysis(
 ) -> Result<annotated::expression::Expression, SemanticAnalysisError> {
     // Verify variable and member exist
     let structure = expression.get_type(output_tree, scope)?;
-    for (name, _) in structure.members() {
+    for (name, member_type) in structure.members() {
         if *name == member_name {
             return Ok(annotated::expression::Expression::MemberAccess(
                 Box::new(expression.semantic_analysis(output_tree, scope)?),
                 member_name,
+                member_type.clone(),
             ));
         }
     }

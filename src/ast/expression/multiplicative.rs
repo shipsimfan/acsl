@@ -37,9 +37,9 @@ pub fn semantic_analysis(
     right_expression: Box<Expression>,
 ) -> Result<annotated::expression::Expression, SemanticAnalysisError> {
     // Verify type
-    left_expression
+    let product_type = left_expression
         .get_type(output_tree, scope)?
-        .multiply_type(&right_expression.get_type(output_tree, scope)?, op)?;
+        .product_type(&right_expression.get_type(output_tree, scope)?, op)?;
 
     // Get expressions
     let left_expression = left_expression.semantic_analysis(output_tree, scope)?;
@@ -49,6 +49,7 @@ pub fn semantic_analysis(
         MultiplyClass::Multiply => annotated::expression::Expression::Multiply(
             Box::new(left_expression),
             Box::new(right_expression),
+            product_type,
         ),
     })
 }

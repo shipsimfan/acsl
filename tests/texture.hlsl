@@ -50,6 +50,6 @@ PixelInput vertex_main(VertexInput vertex_input) {
 }
 
 float4 fragment_main(PixelInput pixel_input) : SV_TARGET {
-    return mul(pixel_input.color, tex.Sample(acsl_tex_sampler_state, pixel_input.uv));
+    return (pixel_input.color * tex.Sample(acsl_tex_sampler_state, pixel_input.uv));
 }
 

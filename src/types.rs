@@ -165,6 +165,22 @@ impl Type {
         }
     }
 
+    pub fn is_float_vector(&self) -> bool {
+        match self {
+            Type::Primitive(primitive) => primitive.is_float_vector(),
+            Type::Alias(inner_type) => inner_type.is_float_vector(),
+            _ => false,
+        }
+    }
+
+    pub fn is_float_matrix(&self) -> bool {
+        match self {
+            Type::Primitive(primitive) => primitive.is_float_matrix(),
+            Type::Alias(inner_type) => inner_type.is_float_matrix(),
+            _ => false,
+        }
+    }
+
     pub fn member_type(&self, member: &str) -> Result<Type, SemanticAnalysisError> {
         let (members, name) = match self {
             Type::Primitive(primitive) => (primitive.members(), primitive.to_string()),
@@ -192,7 +208,7 @@ impl Type {
         }
     }
 
-    pub fn multiply_type(
+    pub fn product_type(
         &self,
         other: &Type,
         op: MultiplyClass,
@@ -206,7 +222,7 @@ impl Type {
                     other.to_string(),
                 ))
             }
-            Type::Alias(inner_type) => return inner_type.multiply_type(other, op),
+            Type::Alias(inner_type) => return inner_type.product_type(other, op),
         };
 
         let right_primitive = match other {
@@ -218,10 +234,10 @@ impl Type {
                     other.to_string(),
                 ))
             }
-            Type::Alias(inner_type) => return self.multiply_type(inner_type, op),
+            Type::Alias(inner_type) => return self.product_type(inner_type, op),
         };
 
-        left_primitive.multiply_type(right_primitive, op)
+        left_primitive.product_type(right_primitive, op)
     }
 
     pub fn hlsl(&self) -> String {
@@ -288,7 +304,21 @@ impl Primitive {
         }
     }
 
-    pub fn multiply_type(
+    pub fn is_float_vector(&self) -> bool {
+        match self {
+            Primitive::FloatVec(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_float_matrix(&self) -> bool {
+        match self {
+            Primitive::FloatMatrix(_, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn product_type(
         &self,
         other: &Primitive,
         op: MultiplyClass,

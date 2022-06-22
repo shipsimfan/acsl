@@ -72,5 +72,6 @@ pub fn semantic_analysis(
     Ok(annotated::expression::Expression::FunctionCall(
         name,
         annoted_parameters,
+        function.return_type().clone(),
     ))
 }

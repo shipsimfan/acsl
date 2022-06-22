@@ -95,7 +95,7 @@ impl AnnotatedSyntaxTree {
         Err(SemanticAnalysisError::UnknownFunction(name.to_owned()))
     }
 
-    pub fn get_structure(&self, name: &str) -> Result<&Struct, SemanticAnalysisError> {
+    pub fn get_structure(&self, name: &str) -> Result<&Rc<Struct>, SemanticAnalysisError> {
         for structure in &self.structs {
             if structure.name() == name {
                 return Ok(&structure);
