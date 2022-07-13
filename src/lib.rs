@@ -6,6 +6,8 @@ mod stream;
 mod tokens;
 mod types;
 
+pub use annotated::{CONSTANT_BUFFER_INDEX, TEXTURES_INDEX};
+
 #[derive(Debug)]
 pub enum CompilationError {
     ParserError(parser::ParserError),
