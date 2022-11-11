@@ -1,2 +1,2 @@
-# acsl
-Alexandria Common Shader Language transpiler. Designed to transpile ACSL to HLSL or GLSL.
+# Alexandria Common Shader Language
+A Transpiler designed to convert ACSL into HLSL or GLSL.
