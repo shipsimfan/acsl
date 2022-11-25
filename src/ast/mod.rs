@@ -32,11 +32,12 @@ pub enum SemanticAnalysisError {
     FragmentMainParameterTypeMismatch(String, String),
     AllFieldsNeedSemantics(String),
     InvalidVariableName(String),
-    InvalidOperation(String, String, String),
+    InvalidOperation(String, &'static str, String),
     VariableTypeMismatch(String, String, String),
     ReusingSlot(&'static str, usize),
     SlotOutOfRange(&'static str, usize, usize),
     AssigningImmutableVariable(String),
+    InvalidTextureType(String),
 }
 
 pub struct AbstractSyntaxTree {
@@ -127,7 +128,8 @@ impl std::fmt::Display for SemanticAnalysisError {
             SemanticAnalysisError::VariableTypeMismatch(name, actual, expected) => write!(f, "Attempting to set \"{}\" to type \"{}\" when it has a type of \"{}\"", name, actual, expected),
             SemanticAnalysisError::ReusingSlot(class, slot) => write!(f, "Reusing {} slot {}", class, slot),
             SemanticAnalysisError::SlotOutOfRange(class, slot, max) => write!(f, "Slot {} is beyond the max slot of {} for {}", slot, max, class),
-            SemanticAnalysisError::AssigningImmutableVariable(name) => write!(f, "Attempting to modify immutable variable \"{}\"", name)
+            SemanticAnalysisError::AssigningImmutableVariable(name) => write!(f, "Attempting to modify immutable variable \"{}\"", name),
+            SemanticAnalysisError::InvalidTextureType(name) => write!(f, "Textures is of type \"{}\" but can only be of type \"float\", \"floatn\", or \"uint\"", name),
         }
     }
 }

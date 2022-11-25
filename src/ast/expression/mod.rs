@@ -17,20 +17,20 @@ pub enum Expression {
     Empty,
 
     // Multiplicative Expressions
-    Multiplicative(Box<Expression>, MultiplyClass, Box<Expression>),
+    Multiply(Box<Expression>, Box<Expression>),
+
+    // Additive Expressions
+    Add(Box<Expression>, Box<Expression>),
+    Subtract(Box<Expression>, Box<Expression>),
 }
 
-#[derive(Clone, Copy)]
-pub enum MultiplyClass {
-    Multiply,
-}
-
+mod additive;
 mod multiplicative;
 mod primary;
 
 impl Expression {
     pub fn parse(stream: &mut Stream) -> Result<(Self, Token), ParserError> {
-        multiplicative::parse(stream)
+        additive::parse(stream)
     }
 
     pub fn get_type(
@@ -51,9 +51,15 @@ impl Expression {
             Expression::MemberAccess(expression, member) => {
                 expression.get_type(output_tree, scope)?.member_type(member)
             }
-            Expression::Multiplicative(left_expression, op, right_expression) => left_expression
+            Expression::Multiply(left_expression, right_expression) => left_expression
                 .get_type(output_tree, scope)?
-                .product_type(&right_expression.get_type(output_tree, scope)?, *op),
+                .product_type(&right_expression.get_type(output_tree, scope)?),
+            Expression::Add(left_expression, right_expression) => left_expression
+                .get_type(output_tree, scope)?
+                .sum_type(&right_expression.get_type(output_tree, scope)?),
+            Expression::Subtract(left_expression, right_expression) => left_expression
+                .get_type(output_tree, scope)?
+                .sum_type(&right_expression.get_type(output_tree, scope)?),
         }
     }
 
@@ -80,15 +86,28 @@ impl Expression {
                     member_name,
                 )
             }
-            Expression::Multiplicative(left_expression, op, right_expression) => {
-                multiplicative::semantic_analysis(
+            Expression::Multiply(left_expression, right_expression) => {
+                multiplicative::multiply_semantic_analysis(
                     output_tree,
                     scope,
                     left_expression,
-                    op,
                     right_expression,
                 )
             }
+            Expression::Add(left_expression, right_expression) => additive::semantic_analysis(
+                output_tree,
+                scope,
+                left_expression,
+                right_expression,
+                true,
+            ),
+            Expression::Subtract(left_expression, right_expression) => additive::semantic_analysis(
+                output_tree,
+                scope,
+                left_expression,
+                right_expression,
+                false,
+            ),
         }
     }
 }
@@ -128,17 +147,15 @@ impl std::fmt::Display for Expression {
             Expression::MemberAccess(variable_name, member_name) => {
                 write!(f, "{}.{}", variable_name, member_name)
             }
-            Expression::Multiplicative(left_expression, op, right_expression) => {
-                write!(f, "({} {} {})", left_expression, op, right_expression)
+            Expression::Multiply(left_expression, right_expression) => {
+                write!(f, "({} * {})", left_expression, right_expression)
             }
-        }
-    }
-}
-
-impl std::fmt::Display for MultiplyClass {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MultiplyClass::Multiply => write!(f, "*"),
+            Expression::Add(left_expression, right_expression) => {
+                write!(f, "({} + {})", left_expression, right_expression)
+            }
+            Expression::Subtract(left_expression, right_expression) => {
+                write!(f, "({} - {})", left_expression, right_expression)
+            }
         }
     }
 }

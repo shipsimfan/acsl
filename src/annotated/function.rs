@@ -75,6 +75,44 @@ impl Function {
                 ],
                 Type::float4(),
             ),
+            Function::new_builtin(
+                "frac".to_owned(),
+                vec![FunctionParameter::new("value".to_owned(), Type::float())],
+                Type::float(),
+            ),
+            Function::new_builtin(
+                "frac2".to_owned(),
+                vec![FunctionParameter::new("value".to_owned(), Type::float2())],
+                Type::float2(),
+            ),
+            Function::new_builtin(
+                "frac3".to_owned(),
+                vec![FunctionParameter::new("value".to_owned(), Type::float3())],
+                Type::float3(),
+            ),
+            Function::new_builtin(
+                "frac4".to_owned(),
+                vec![FunctionParameter::new("value".to_owned(), Type::float4())],
+                Type::float4(),
+            ),
+            Function::new_builtin(
+                "floor".to_owned(),
+                vec![FunctionParameter::new("value".to_owned(), Type::float())],
+                Type::float(),
+            ),
+            Function::new_builtin(
+                "load".to_owned(),
+                vec![
+                    FunctionParameter::new("texture".to_owned(), Type::texture()),
+                    FunctionParameter::new("uv".to_owned(), Type::float3()),
+                ],
+                Type::uint(),
+            ),
+            Function::new_builtin(
+                "uint_to_float".to_owned(),
+                vec![FunctionParameter::new("value".to_owned(), Type::uint())],
+                Type::float(),
+            ),
         ]
         .into_boxed_slice()
     }

@@ -1,6 +1,6 @@
 use crate::{
     annotated::{structure::Struct, AnnotatedSyntaxTree},
-    ast::{expression::MultiplyClass, SemanticAnalysisError},
+    ast::SemanticAnalysisError,
 };
 use std::{rc::Rc, sync::Once};
 
@@ -17,6 +17,7 @@ pub enum Primitive {
     Float,
     FloatVec(usize),
     FloatMatrix(usize, usize),
+    Uint,
     Texture,
 }
 
@@ -131,6 +132,10 @@ impl Type {
         Type::floatnxm(4, 4)
     }
 
+    pub fn uint() -> Self {
+        Type::Primitive(Primitive::Uint)
+    }
+
     pub fn texture() -> Self {
         Type::Primitive(Primitive::Texture)
     }
@@ -161,7 +166,24 @@ impl Type {
             "float4x2" => Ok(Type::float4x2()),
             "float4x3" => Ok(Type::float4x3()),
             "float4x4" => Ok(Type::float4x4()),
+            "uint" => Ok(Type::uint()),
             _ => output_tree.get_type(name),
+        }
+    }
+
+    pub fn is_uint(&self) -> bool {
+        match self {
+            Type::Primitive(primitive) => primitive.is_uint(),
+            Type::Alias(inner_type) => inner_type.is_uint(),
+            _ => false,
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        match self {
+            Type::Primitive(primitive) => primitive.is_float(),
+            Type::Alias(inner_type) => inner_type.is_float(),
+            _ => false,
         }
     }
 
@@ -208,21 +230,17 @@ impl Type {
         }
     }
 
-    pub fn product_type(
-        &self,
-        other: &Type,
-        op: MultiplyClass,
-    ) -> Result<Type, SemanticAnalysisError> {
+    pub fn sum_type(&self, other: &Type) -> Result<Type, SemanticAnalysisError> {
         let left_primitive = match self {
             Type::Primitive(primitive) => primitive,
             Type::Struct(_) => {
                 return Err(SemanticAnalysisError::InvalidOperation(
                     self.to_string(),
-                    op.to_string(),
+                    "+",
                     other.to_string(),
                 ))
             }
-            Type::Alias(inner_type) => return inner_type.product_type(other, op),
+            Type::Alias(inner_type) => return inner_type.sum_type(other),
         };
 
         let right_primitive = match other {
@@ -230,14 +248,42 @@ impl Type {
             Type::Struct(_) => {
                 return Err(SemanticAnalysisError::InvalidOperation(
                     self.to_string(),
-                    op.to_string(),
+                    "+",
                     other.to_string(),
                 ))
             }
-            Type::Alias(inner_type) => return self.product_type(inner_type, op),
+            Type::Alias(inner_type) => return inner_type.sum_type(other),
         };
 
-        left_primitive.product_type(right_primitive, op)
+        left_primitive.sum_type(right_primitive)
+    }
+
+    pub fn product_type(&self, other: &Type) -> Result<Type, SemanticAnalysisError> {
+        let left_primitive = match self {
+            Type::Primitive(primitive) => primitive,
+            Type::Struct(_) => {
+                return Err(SemanticAnalysisError::InvalidOperation(
+                    self.to_string(),
+                    "*",
+                    other.to_string(),
+                ))
+            }
+            Type::Alias(inner_type) => return inner_type.product_type(other),
+        };
+
+        let right_primitive = match other {
+            Type::Primitive(primitive) => primitive,
+            Type::Struct(_) => {
+                return Err(SemanticAnalysisError::InvalidOperation(
+                    self.to_string(),
+                    "*",
+                    other.to_string(),
+                ))
+            }
+            Type::Alias(inner_type) => return self.product_type(inner_type),
+        };
+
+        left_primitive.product_type(right_primitive)
     }
 
     pub fn hlsl(&self) -> String {
@@ -299,8 +345,25 @@ impl Primitive {
                     4 => FLOAT4_MEMBERS.as_ref().unwrap(),
                     _ => panic!("Invalid float vector dimension"),
                 },
-                Primitive::FloatMatrix(_, _) | Primitive::Void | Primitive::Texture => &[],
+                Primitive::FloatMatrix(_, _)
+                | Primitive::Void
+                | Primitive::Texture
+                | Primitive::Uint => &[],
             }
+        }
+    }
+
+    pub fn is_uint(&self) -> bool {
+        match self {
+            Primitive::Uint => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        match self {
+            Primitive::Float => true,
+            _ => false,
         }
     }
 
@@ -318,79 +381,80 @@ impl Primitive {
         }
     }
 
-    pub fn product_type(
-        &self,
-        other: &Primitive,
-        op: MultiplyClass,
-    ) -> Result<Type, SemanticAnalysisError> {
+    pub fn sum_type(&self, other: &Primitive) -> Result<Type, SemanticAnalysisError> {
         match self {
-            Primitive::Void | Primitive::Texture => Err(SemanticAnalysisError::InvalidOperation(
-                self.to_string(),
-                op.to_string(),
-                other.to_string(),
-            )),
+            Primitive::FloatMatrix(_, _) | Primitive::Void | Primitive::Texture => Err(()),
+            Primitive::Float => match other {
+                Primitive::Float => Ok(Type::float()),
+                Primitive::FloatMatrix(_, _)
+                | Primitive::FloatVec(_)
+                | Primitive::Void
+                | Primitive::Uint
+                | Primitive::Texture => Err(()),
+            },
+            Primitive::FloatVec(left_dimension) => match other {
+                Primitive::FloatVec(right_dimension) => match left_dimension == right_dimension {
+                    true => Ok(Type::Primitive(Primitive::FloatVec(*left_dimension))),
+                    false => Err(()),
+                },
+                Primitive::FloatMatrix(_, _)
+                | Primitive::Float
+                | Primitive::Void
+                | Primitive::Texture
+                | Primitive::Uint => Err(()),
+            },
+            Primitive::Uint => match other {
+                Primitive::Uint => Ok(Type::uint()),
+                _ => Err(()),
+            },
+        }
+        .map_err(|_| {
+            SemanticAnalysisError::InvalidOperation(self.to_string(), "+", other.to_string())
+        })
+    }
+
+    pub fn product_type(&self, other: &Primitive) -> Result<Type, SemanticAnalysisError> {
+        match self {
+            Primitive::Void | Primitive::Texture => Err(()),
             Primitive::Float => match other {
                 Primitive::Float => Ok(Type::float()),
                 Primitive::FloatVec(dimension) => {
                     Ok(Type::Primitive(Primitive::FloatVec(*dimension)))
                 }
                 Primitive::FloatMatrix(n, m) => Ok(Type::Primitive(Primitive::FloatMatrix(*n, *m))),
-                Primitive::Void | Primitive::Texture => {
-                    Err(SemanticAnalysisError::InvalidOperation(
-                        self.to_string(),
-                        op.to_string(),
-                        other.to_string(),
-                    ))
-                }
+                Primitive::Void | Primitive::Texture | Primitive::Uint => Err(()),
             },
             Primitive::FloatVec(left_dimension) => match other {
                 Primitive::Float => Ok(Type::Primitive(Primitive::FloatVec(*left_dimension))),
                 Primitive::FloatVec(right_dimension) => match left_dimension == right_dimension {
                     true => Ok(Type::Primitive(Primitive::FloatVec(*left_dimension))),
-                    false => Err(SemanticAnalysisError::InvalidOperation(
-                        self.to_string(),
-                        op.to_string(),
-                        other.to_string(),
-                    )),
+                    false => Err(()),
                 },
                 Primitive::FloatMatrix(n, m) => match left_dimension == n {
                     true => Ok(Type::Primitive(Primitive::FloatVec(*m))),
-                    false => Err(SemanticAnalysisError::InvalidOperation(
-                        self.to_string(),
-                        op.to_string(),
-                        other.to_string(),
-                    )),
+                    false => Err(()),
                 },
-                Primitive::Void | Primitive::Texture => {
-                    Err(SemanticAnalysisError::InvalidOperation(
-                        self.to_string(),
-                        op.to_string(),
-                        other.to_string(),
-                    ))
-                }
+                Primitive::Void | Primitive::Texture | Primitive::Uint => Err(()),
             },
             Primitive::FloatMatrix(left_n, left_m) => match other {
                 Primitive::Float => Ok(Type::Primitive(Primitive::FloatMatrix(*left_n, *left_m))),
                 Primitive::FloatVec(dimension) => match dimension == left_m {
                     true => Ok(Type::Primitive(Primitive::FloatVec(*left_n))),
-                    false => Err(SemanticAnalysisError::InvalidOperation(
-                        self.to_string(),
-                        op.to_string(),
-                        other.to_string(),
-                    )),
+                    false => Err(()),
                 },
                 Primitive::FloatMatrix(_, right_m) => {
                     Ok(Type::Primitive(Primitive::FloatMatrix(*left_n, *right_m)))
                 }
-                Primitive::Void | Primitive::Texture => {
-                    Err(SemanticAnalysisError::InvalidOperation(
-                        self.to_string(),
-                        op.to_string(),
-                        other.to_string(),
-                    ))
-                }
+                Primitive::Void | Primitive::Texture | Primitive::Uint => Err(()),
+            },
+            Primitive::Uint => match other {
+                Primitive::Uint => Ok(Type::uint()),
+                _ => Err(()),
             },
         }
+        .map_err(|_| {
+            SemanticAnalysisError::InvalidOperation(self.to_string(), "*", other.to_string())
+        })
     }
 
     pub fn hlsl(&self) -> String {
@@ -399,6 +463,7 @@ impl Primitive {
             Primitive::Float => "float".to_owned(),
             Primitive::FloatVec(dimension) => format!("float{}", dimension),
             Primitive::FloatMatrix(n, m) => format!("float{}x{}", n, m),
+            Primitive::Uint => "uint".to_owned(),
             Primitive::Texture => "Texture2D".to_owned(),
         }
     }
@@ -409,6 +474,7 @@ impl Primitive {
             Primitive::Float => "float".to_owned(),
             Primitive::FloatVec(dimension) => format!("vec{}", dimension),
             Primitive::FloatMatrix(n, m) => format!("mat{}x{}", m, n),
+            Primitive::Uint => "uint".to_owned(),
             Primitive::Texture => "sampler2D".to_owned(),
         }
     }
@@ -450,6 +516,7 @@ impl std::fmt::Display for Primitive {
             Primitive::Float => write!(f, "float"),
             Primitive::FloatVec(dimension) => write!(f, "float{}", dimension),
             Primitive::FloatMatrix(n, m) => write!(f, "float{}x{}", n, m),
+            Primitive::Uint => write!(f, "uint"),
             Primitive::Texture => write!(f, "texture"),
         }
     }

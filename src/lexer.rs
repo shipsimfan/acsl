@@ -171,6 +171,7 @@ pub fn next_token(stream: &mut Stream) -> Result<Option<Token>, LexerError> {
                     '>' => TokenClass::RightAngleBracket,
                     '=' => TokenClass::Equal,
                     '*' => TokenClass::Asterick,
+                    '+' => TokenClass::Plus,
                     _ => return Err(LexerError::UnknownCharacter(c, column, line)),
                 }
             }

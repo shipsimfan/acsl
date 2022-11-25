@@ -1,4 +1,4 @@
-use super::{primary, Expression, MultiplyClass};
+use super::{primary, Expression};
 use crate::{
     annotated::{self, AnnotatedSyntaxTree},
     ast::{scope::Scope, SemanticAnalysisError},
@@ -15,11 +15,8 @@ pub fn parse(stream: &mut Stream) -> Result<(Expression, Token), ParserError> {
             TokenClass::Asterick => {
                 let (right_expression, nt) = primary::parse(stream)?;
 
-                left_expression = Expression::Multiplicative(
-                    Box::new(left_expression),
-                    MultiplyClass::Multiply,
-                    Box::new(right_expression),
-                );
+                left_expression =
+                    Expression::Multiply(Box::new(left_expression), Box::new(right_expression));
                 next_token = nt;
             }
             _ => break,
@@ -29,27 +26,24 @@ pub fn parse(stream: &mut Stream) -> Result<(Expression, Token), ParserError> {
     Ok((left_expression, next_token))
 }
 
-pub fn semantic_analysis(
+pub fn multiply_semantic_analysis(
     output_tree: &AnnotatedSyntaxTree,
     scope: &Scope,
     left_expression: Box<Expression>,
-    op: MultiplyClass,
     right_expression: Box<Expression>,
 ) -> Result<annotated::expression::Expression, SemanticAnalysisError> {
     // Verify type
     let product_type = left_expression
         .get_type(output_tree, scope)?
-        .product_type(&right_expression.get_type(output_tree, scope)?, op)?;
+        .product_type(&right_expression.get_type(output_tree, scope)?)?;
 
     // Get expressions
     let left_expression = left_expression.semantic_analysis(output_tree, scope)?;
     let right_expression = right_expression.semantic_analysis(output_tree, scope)?;
 
-    Ok(match op {
-        MultiplyClass::Multiply => annotated::expression::Expression::Multiply(
-            Box::new(left_expression),
-            Box::new(right_expression),
-            product_type,
-        ),
-    })
+    Ok(annotated::expression::Expression::Multiply(
+        Box::new(left_expression),
+        Box::new(right_expression),
+        product_type,
+    ))
 }

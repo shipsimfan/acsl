@@ -8,6 +8,8 @@ pub enum Expression {
     MemberAccess(Box<Expression>, String, Type),
     Empty,
     Multiply(Box<Expression>, Box<Expression>, Type),
+    Add(Box<Expression>, Box<Expression>, Type),
+    Subtract(Box<Expression>, Box<Expression>, Type),
 }
 
 impl Expression {
@@ -21,6 +23,12 @@ impl Expression {
                         "{0}.Sample(acsl_{0}_sampler_state, ",
                         parameters.remove(0).hlsl()
                     )
+                } else if name == "load" {
+                    format!("{}.Load(", parameters.remove(0).hlsl())
+                } else if name == "frac2" || name == "frac3" || name == "frac4" {
+                    format!("frac(")
+                } else if name == "uint_to_float" {
+                    format!("float(")
                 } else {
                     format!("{}(", name)
                 };
@@ -88,6 +96,12 @@ impl Expression {
                     format!("({} * {})", left_expression.hlsl(), right_expression.hlsl())
                 }
             }
+            Expression::Add(left_expression, right_expression, _) => {
+                format!("({} + {})", left_expression.hlsl(), right_expression.hlsl())
+            }
+            Expression::Subtract(left_expression, right_expression, _) => {
+                format!("({} - {})", left_expression.hlsl(), right_expression.hlsl())
+            }
         }
     }
 
@@ -100,6 +114,8 @@ impl Expression {
             Expression::FloatLiteral(_) => Type::float(),
             Expression::MemberAccess(_, _, member_type) => member_type.clone(),
             Expression::Multiply(_, _, product_type) => product_type.clone(),
+            Expression::Add(_, _, sum_type) => sum_type.clone(),
+            Expression::Subtract(_, _, sum_type) => sum_type.clone(),
         }
     }
 
@@ -114,6 +130,9 @@ impl Expression {
                     "float3" => "vec3",
                     "float4" => "vec4",
                     "sample_texture" => "texture",
+                    "frac" | "frac2" | "frac3" | "frac4" => "fract",
+                    "uint_to_float" => "float",
+                    "load" => panic!("Not supported on GLSL"),
                     _ => &name,
                 };
 
@@ -170,6 +189,12 @@ impl Expression {
             }
             Expression::Multiply(left_expression, right_expression, _) => {
                 format!("({} * {})", left_expression.glsl(), right_expression.glsl())
+            }
+            Expression::Add(left_expression, right_expression, _) => {
+                format!("({} + {})", left_expression.glsl(), right_expression.glsl())
+            }
+            Expression::Subtract(left_expression, right_expression, _) => {
+                format!("({} - {})", left_expression.glsl(), right_expression.glsl())
             }
         }
     }

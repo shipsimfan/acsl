@@ -25,6 +25,7 @@ pub enum TokenClass {
     RightAngleBracket,
     Equal,
     Asterick,
+    Plus,
 }
 
 #[derive(Debug)]
@@ -82,6 +83,7 @@ impl std::fmt::Display for TokenClass {
             TokenClass::RightAngleBracket => write!(f, ">"),
             TokenClass::Equal => write!(f, "="),
             TokenClass::Asterick => write!(f, "*"),
+            TokenClass::Plus => write!(f, "+"),
         }
     }
 }

@@ -17,7 +17,7 @@ pub enum Declaration {
     ),
     Struct(String, Vec<(String, String, Option<String>)>),
     ConstantBuffer(String, usize, String),
-    Texture(String, usize),
+    Texture(String, usize, String),
     TypeAlias(String, String),
     Constant(String, Expression),
 }
@@ -42,9 +42,9 @@ impl Declaration {
             Declaration::ConstantBuffer(name, slot, type_name) => output_tree.push_constant_buffer(
                 constant_buffer::semantic_analysis(output_tree, name, slot, type_name)?,
             ),
-            Declaration::Texture(name, slot) => {
-                output_tree.push_texture(texture::semantic_analysis(name, slot)?)
-            }
+            Declaration::Texture(name, slot, texture_type) => output_tree.push_texture(
+                texture::semantic_analysis(name, slot, texture_type, &output_tree)?,
+            ),
             Declaration::TypeAlias(name, type_name) => {
                 type_alias::semantic_analysis(output_tree, name, type_name)
             }
@@ -93,7 +93,9 @@ impl std::fmt::Display for Declaration {
             Declaration::ConstantBuffer(name, slot, type_name) => {
                 writeln!(f, "Constant Buffer \"{}\" @ {} ({})", name, slot, type_name)
             }
-            Declaration::Texture(name, slot) => writeln!(f, "Texture \"{}\" @ {}", name, slot),
+            Declaration::Texture(name, slot, texture_type) => {
+                writeln!(f, "Texture<{}> \"{}\" @ {}", texture_type, name, slot)
+            }
             Declaration::TypeAlias(name, type_name) => {
                 writeln!(f, "Type Alias {} = {}", name, type_name)
             }
